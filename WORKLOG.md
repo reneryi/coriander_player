@@ -1,0 +1,807 @@
+# Coriander Player 工作日志
+
+说明：按会话记录已完成事项与验证结果。  
+时区：Asia/Hong_Kong
+
+## 2026-04-13
+
+### 会话 1：Fork 后本地初始化
+- 从个人仓库克隆到本地目录：`E:\PyCharmSave\coriander_player`
+- 配置远程：
+  - `origin` -> `https://github.com/reneryi/coriander_player.git`
+  - `upstream` -> `https://github.com/Ferry-200/coriander_player.git`
+- 拉取并校验上游分支，确认 `origin/main` 与 `upstream/main` 同步
+
+### 会话 2：IDE 大面积报红（第一轮）
+- 识别项目技术栈：Flutter + Rust
+- 完成本地工具链体检（Flutter/Dart/Rust/Cargo）
+- 修复 `flutter pub get` 依赖冲突：
+  - `material_color_utilities` 从 `^0.11.1` 升级到 `^0.13.0`（适配 Flutter 3.41.x）
+- 新增本地私密占位文件（gitignore）：
+  - `lib/page/settings_page/cpfeedback_key.dart`
+- 验证：
+  - `flutter pub get` 通过
+  - `flutter build windows --debug` 通过
+
+### 会话 3：Deprecated 清理与稳定性优化
+- 替换过时 API（保持行为语义不变）：
+  - `Color.value` -> `toARGB32()`
+  - `withOpacity(...)` -> `withValues(alpha: ...)`
+  - `ShowValueIndicator.always` -> `ShowValueIndicator.onDrag`
+  - `ThemeData.indicatorColor` -> `TabBarThemeData.indicatorColor`
+  - `Color.red/green/blue` -> `r/g/b` + 显式 byte 转换
+- 降低命名风格类 analyzer 噪音（`analysis_options.yaml`）
+- 新增 Windows C++ 索引配置：
+  - `.vscode/c_cpp_properties.json`
+  - `.clangd`
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 4：残余 C++ 报红修复
+- 修复 `windows/runner/flutter_window.cpp` 中头文件路径解析问题：
+  - `#include "flutter/generated_plugin_registrant.h"`
+  - -> `#include "../flutter/generated_plugin_registrant.h"`
+- 目的：消除 clang 索引误报并恢复 `RegisterPlugins` 符号识别
+- 验证：
+  - `flutter build windows --debug` -> 成功
+  - `flutter analyze` -> `No issues found!`
+
+### 会话 5：AI 工作规则专项化
+- 将空白 `AI_RULES.md` 重构为项目专项规则文档
+- 新增内容：
+  - 启动流程（`AI_RULES -> TASK_LIST -> WORKLOG -> git status`）
+  - 项目架构快照（Flutter + Rust + Windows Runner）
+  - 任务优先级与变更边界
+  - 按改动类型划分的验证矩阵（Dart/Rust/C++）
+  - 完成定义（DoD）与日志更新约束
+  - 未来 `TASK_LIST.md` 协作规则
+
+### 会话 6：中文规则统一 + 阶段任务实现
+- 文档中文化
+  - 将 `AI_RULES.md` 全量改写为中文，并新增“所有 AI 输出与日志一律中文”的强制条款
+  - 将 `WORKLOG.md` 全量改写为中文
+- 阶段一任务 1（稳定性修复）
+  - 修复播放状态误判导致“仍在播放但控件显示播放三角图标”的问题
+  - 在 `BassPlayer` 中增加“仅在真正到达流末尾时才上报 completed”判定
+  - 避免重复 position timer，降低旧状态事件干扰
+- 阶段二任务 1（关闭窗口最小化到托盘）
+  - 在 Windows Runner 中拦截 `WM_CLOSE`，默认隐藏到系统托盘而非直接退出
+  - 增加托盘图标与菜单（打开、上一首、播放/暂停、下一首、退出）
+- 阶段二任务 2（任务栏悬停控件）
+  - 增加任务栏缩略图按钮（上一首、播放/暂停、下一首）
+  - 新增原生 -> Flutter 控制通道 `coriander_player/window_controls`
+  - Flutter 侧接入控制处理，映射到现有播放服务动作
+- 任务清单回写
+  - 将 `TASK_LIST.md` 中阶段一任务 1、阶段二任务 1/2 标记为已完成（`[x]`）
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+## 后续模板
+- 日期：
+- 会话：
+- 目标：
+- 改动文件：
+- 验证：
+- 备注/下一步：
+
+### 会话 7：阶段任务复核与交付确认
+- 目标：按 `TASK_LIST.md` 完成“阶段一任务 1、阶段二任务 1/2”，并确认文档中文化规则落地
+- 结果：
+  - `AI_RULES.md` 已明确“所有 AI 输出与日志一律中文”
+  - `TASK_LIST.md` 中阶段一任务 1、阶段二任务 1/2 均为已完成状态（`[x]`）
+  - 阶段任务对应代码已落地（播放状态修复、托盘最小化、任务栏悬停控制）
+- 复验：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 8：运行时异常修复（BASS 动态库 126）
+- 问题：
+  - 启动时报错：`Failed to load dynamic library ...\\BASS\\bass.dll (error code: 126)`
+- 根因：
+  - 调试输出目录缺少 `BASS` 目录及相关 dll，且项目构建流程未自动复制本地 BASS 运行时依赖
+- 修复：
+  - 在项目根目录补齐本地 `BASS/*.dll`（从本机已安装 Coriander Player 的 `E:\\Coriander Player\\BASS` 同步）
+  - 修改 `windows/CMakeLists.txt`，新增安装阶段自动复制 `<repo>/BASS/*.dll` 到运行目录 `...\\Debug\\BASS`
+  - 修改 `lib/src/bass/bass_player.dart`：
+    - 启动时显式检查 `bass.dll` 和 `basswasapi.dll` 是否存在
+    - 动态库加载失败时给出更明确错误信息（提示依赖目录）
+    - BASS 插件加载改为绝对路径，避免工作目录变化导致找不到插件
+  - 更新 `.gitignore`：忽略本地 `BASS/`，避免误提交第三方二进制
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+  - 已确认存在 `build\\windows\\x64\\runner\\Debug\\BASS\\bass.dll` 及全部插件 dll
+
+## 2026-04-14
+
+### 会话 9：按 TASK_LIST 交付阶段一任务 1 + 阶段二任务 1/2
+- 目标：
+  - 读取 `AI_RULES.md`、`TASK_LIST.md`、`WORKLOG.md`
+  - 完成并复核 `TASK_LIST.md` 中：
+    - 阶段一任务 1：播放状态与图标显示同步修复
+    - 阶段二任务 1：关闭窗口默认最小化到系统托盘
+    - 阶段二任务 2：任务栏悬停增加上一首/播放暂停/下一首控制
+- 结果：
+  - 阶段一任务 1 对应实现已在 `lib/src/bass/bass_player.dart` 落地：
+    - 仅在真正到达流末尾时上报 `PlayerState.completed`
+    - 启停时先取消旧的 position timer，避免重复计时器导致状态干扰
+  - 阶段二任务 1/2 对应实现已在 Windows Runner 与 Flutter 通道侧落地：
+    - `WM_CLOSE` 拦截并隐藏到托盘，托盘菜单含打开/上一首/播放暂停/下一首/退出
+    - 任务栏缩略图按钮支持上一首/播放暂停/下一首
+    - 原生通道 `coriander_player/window_controls` 已接入 Flutter 播放控制
+  - `TASK_LIST.md` 中上述任务状态均为已完成（`[x]`）
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 10：阶段二任务实测问题二次修复（托盘最小化与任务栏控件）
+- 触发原因：
+  - 用户实测反馈：鼠标悬停任务栏未显示音频控件；点击右上角 X 未最小化到托盘。
+- 修复内容：
+  - `windows/runner/flutter_window.cpp`
+    - 新增 `TaskbarButtonCreated` 消息注册与处理，在任务栏按钮真正创建后再调用 `SetupTaskbarButtons()`，修复缩略图按钮初始化时机过早问题。
+    - 新增 `WM_SYSCOMMAND` + `SC_CLOSE` 拦截，确保关闭动作也走“最小化到托盘”路径。
+    - `RestoreFromTray()` 时移除托盘图标，避免恢复后残留托盘图标。
+  - `windows/runner/flutter_window.h`
+    - 新增 `taskbar_button_created_message_` 成员，保存动态注册的 Taskbar 消息 ID。
+  - `lib/component/title_bar.dart`
+    - 右上角关闭按钮改为仅调用 `windowManager.close()`，移除提前执行的“真正退出清理”逻辑，避免与“关闭最小化到托盘”语义冲突。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+  - 首次构建遇到 `LNK1168`（目标 exe 被占用），结束占用进程后重试构建成功。
+
+### 会话 11：任务栏控件图标修正 + 托盘右键菜单修复
+- 触发原因：
+  - 用户实测反馈任务栏缩略图按钮图标不是音频控制图标。
+  - 最小化到托盘后右键菜单无响应，导致无法通过托盘退出。
+- 修复内容：
+  - `windows/runner/flutter_window.cpp`
+    - 托盘回调事件从直接比较 `lParam` 改为比较 `LOWORD(lParam)`，兼容 `NOTIFYICON_VERSION_4` 事件分发。
+    - 补充处理 `NIN_KEYSELECT` 与 `WM_LBUTTONUP`，提升托盘交互稳定性。
+    - `TrackPopupMenu` 后发送 `WM_NULL`，避免托盘菜单焦点异常。
+    - 任务栏缩略图按钮图标替换为自绘传输图标（上一首/播放暂停/下一首），不再使用警告/信息类系统图标。
+  - `windows/runner/flutter_window.h`
+    - 新增 `TransportIconType` 和 `CreateTransportIcon(...)` 声明。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 12：任务栏缩略图样式优化 + 托盘菜单中文化 + 恢复后控件重建
+- 触发原因：
+  - 用户反馈任务栏控件图标观感不佳。
+  - 托盘右键菜单需要中文。
+  - 从托盘恢复窗口后任务栏缩略图控件会消失。
+- 修复内容：
+  - `windows/runner/flutter_window.cpp`
+    - 任务栏控件图标改为透明背景的矢量绘制，去除黑底块感。
+    - 托盘菜单文案改为中文（打开、上一首、播放/暂停、下一首、退出）。
+    - 新增 `kRefreshThumbButtonsMessage` 恢复消息，恢复窗口后主动重建缩略图按钮。
+    - `SetupTaskbarButtons()` 改为支持 Add/Update 双路径，避免恢复后按钮丢失。
+    - 最小化到托盘时重置按钮注册状态，确保恢复后可重新注册。
+  - `windows/runner/flutter_window.h`
+    - 新增 `kRefreshThumbButtonsMessage` 与 `thumb_buttons_added_` 状态字段。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 13：任务栏控件样式对齐参考图 + 播放/暂停动态图标
+- 触发原因：
+  - 用户要求控件风格对齐参考图，且中心按钮在未播放时显示三角形，播放时显示双竖线。
+- 修复内容：
+  - `windows/runner/flutter_window.h`
+    - `TransportIconType` 拆分为 `Play` / `Pause`，新增运行时播放状态字段 `is_playing_`。
+  - `windows/runner/flutter_window.cpp`
+    - `MethodChannel(coriander_player/window_controls)` 新增原生侧方法处理 `set_playing`，由 Flutter 主动同步当前播放状态。
+    - 中间任务栏按钮图标改为状态联动：未播放显示 `Play`，播放中显示 `Pause`。
+    - 上一首/下一首图标改为参考图样式：`竖线+左三角` 与 `右三角+竖线`（单三角）。
+  - `lib/window_controls.dart`
+    - 初始化时与 `playerStateStream` 变化时向原生通道发送 `set_playing`，确保任务栏中心图标与真实状态同步。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 14：阶段一任务2 + 阶段二任务3/4/5/6 交付
+- 目标：
+  - 按 `TASK_LIST.md` 完成新增 5 项任务（阶段一 1 项 + 阶段二 4 项）。
+- 改动概览：
+  - 阶段一任务 2（桌面歌词立即显示当前句）
+    - `lib/play_service/lyric_service.dart`
+      - 位置流推进逻辑改为按当前播放位置“快速追平”（while 累进），修复启动桌面歌词后长时间不同步问题。
+      - 新增 `refreshCurrentLyricLine()`，可主动推送当前歌词行到桌面歌词。
+    - `lib/play_service/desktop_lyric_service.dart`
+      - 启动桌面歌词后立即调用 `refreshCurrentLyricLine()`，确保“打开即显示当前句”。
+  - 阶段二任务 3（播放列表自定义顺序）
+    - `lib/page/uni_page.dart`
+      - 新增列表拖拽重排能力（`ReorderableListView` + `onReorder` 回调）。
+    - `lib/page/playlist_detail_page.dart`
+      - 新增排序项“自定义顺序”，仅在该排序下允许拖拽改序。
+      - 拖拽结果持久写回歌单内部顺序。
+    - `lib/library/playlist.dart`
+      - 新增 `addAudio/removeAudioByPath/applyCustomOrder` 等方法，统一管理歌单顺序与增删。
+    - `lib/component/audio_tile.dart`、`lib/page/uni_page_components.dart`
+      - 添加到歌单逻辑改为调用 `Playlist` 方法，避免直接操作底层 Map。
+  - 阶段二任务 4（专辑识别碟号并按碟号+音轨排序）
+    - `rust/src/api/tag_reader.rs`
+      - 扫描标签时新增 `disc` 字段输出（Lofty 标签读取碟号）。
+    - `lib/library/audio_library.dart`
+      - `Audio` 新增 `disc` 字段并落盘/读盘；旧索引无 `disc` 时增加路径推断兜底。
+    - `lib/page/album_detail_page.dart`
+      - 专辑“音轨”排序改为先 `disc` 后 `track`，同轨时按标题兜底。
+      - 曲目标号展示支持 `CD-Track` 形式（例如 `01-03`）。
+  - 阶段二任务 5（歌词翻译显示开关）
+    - `lib/app_preference.dart`
+      - `NowPlayingPagePreference` 新增 `showTranslation` 持久化字段。
+    - `lib/page/now_playing_page/component/lyric_view_controls.dart`
+      - 新增“显示/隐藏翻译”按钮。
+    - `lib/page/now_playing_page/component/lyric_view_tile.dart`
+      - 主界面歌词渲染按 `showTranslation` 决定是否显示翻译行。
+    - `lib/component/horizontal_lyric_view.dart`
+      - 顶部横向歌词同样按 `showTranslation` 显示。
+    - `lib/play_service/desktop_lyric_service.dart`
+      - 发送到桌面歌词时按 `showTranslation` 决定是否附带翻译文本。
+  - 阶段二任务 6（音乐页右侧首字母快速定位）
+    - `lib/page/uni_page.dart`
+      - 新增通用右侧索引条能力（标签列表 + 标签到列表索引解析器）。
+    - `lib/page/audios_page.dart`
+      - 接入 A-Z/# 索引，支持按标题首字母快速跳转。
+- 任务清单回写：
+  - `TASK_LIST.md` 中阶段一任务 2、阶段二任务 3/4/5/6 已标记为完成（`[✔]`）。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter build windows --debug` -> 成功
+- 风险与备注：
+  - `disc` 字段对旧索引兼容：旧数据无该字段时按 0 处理，不会阻断读取；若需更准确碟号，建议执行一次索引更新/重扫。
+  - 右侧首字母定位基于“当前列表顺序”；在非标题排序下仍可跳转，但体验最佳排序方式为“标题升序”。
+
+### 会话 15：实测回归修复（桌面歌词按钮、歌单拖拽、字母索引UI）
+- 触发原因：
+  - 用户反馈：点击桌面歌词按钮无反应。
+  - 用户反馈：播放列表中看不到/无法触发自定义顺序拖拽。
+  - 用户反馈：首字母索引条遮挡正常内容，且字母尺寸偏小。
+- 修复内容：
+  - `lib/play_service/desktop_lyric_service.dart`
+    - `startDesktopLyric()` 增加启动防重入、异常捕获与错误提示。
+    - 新增进程退出回收逻辑（进程退出后自动重置状态），避免按钮状态卡死。
+    - 桌面歌词启动后延迟刷新当前歌词行，提升启动后首次显示稳定性。
+  - `lib/page/now_playing_page/page.dart`
+    - 桌面歌词按钮在启动 Future 未完成时禁用，避免重复点击导致状态混乱。
+  - `lib/page/uni_page.dart`
+    - 拖拽由“默认拖拽柄”改为“长按整行拖拽”，提高可发现性与可操作性。
+    - 首字母索引条增加右侧留白，不再遮挡列表内容。
+    - 索引条 UI 改为半透明胶囊，字母字号调大。
+  - `lib/page/playlist_detail_page.dart`
+    - 歌单详情默认切到“自定义顺序”排序项，进入页面即可长按拖拽改序。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 16：实测回归修复（桌面歌词路径兜底 + 两处播放列表拖拽）
+- 触发原因：
+  - 用户反馈桌面歌词仍无法打开（界面提示“桌面歌词启动失败”）。
+  - 用户反馈歌单页与播放详情页播放列表均无法移动歌曲。
+- 修复内容：
+  - `lib/play_service/desktop_lyric_service.dart`
+    - 新增桌面歌词可执行文件路径探测（运行目录、当前目录、`E:\Coriander Player\desktop_lyric\desktop_lyric.exe`）。
+    - `Process.start` 增加 `workingDirectory` 为桌面歌词 exe 所在目录，避免相对资源路径导致启动失败。
+    - 保留启动失败提示，并增加进程退出自动回收状态。
+  - `lib/page/uni_page.dart`
+    - 歌单详情页拖拽改为默认拖拽柄模式（可见可拖），修复“看不到拖拽入口”的问题。
+  - `lib/play_service/playback_service.dart`
+    - 新增 `reorderPlaylist(oldIndex, newIndex)`，支持运行时播放列表重排并保持当前播放项索引正确。
+  - `lib/page/now_playing_page/component/current_playlist_view.dart`
+    - 播放详情页播放列表改为 `ReorderableListView`，新增可见拖拽柄，支持直接重排行。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 17：阶段一/二收尾（重复歌曲、WAV、播放页增强、音量均衡、CUE、桌面歌词记忆）
+- 目标：
+  - 完成 `TASK_LIST.md` 中阶段一 `[3]` 与阶段二 `[7]-[12]`。
+- 主要改动：
+  - 阶段一 `[3]` 重复歌曲去重
+    - `rust/src/api/tag_reader.rs`
+      - 新增路径标准化去重流程，按规范化绝对路径去重索引音频，避免多目录扫描时重复显示同一文件。
+  - 阶段二 `[7]` WAV 元数据读取
+    - `rust/src/api/tag_reader.rs`
+      - WAV/WAVE 读取策略调整为优先 Windows Music Properties，Lofty 作为补全兜底。
+  - 阶段二 `[8]` 播放页“添加到歌单”
+    - `lib/page/now_playing_page/page.dart`
+      - 在播放页“更多”菜单新增“添加到歌单”子菜单，可直接加入任意歌单。
+  - 阶段二 `[9]` 长标题滚动
+    - `lib/page/now_playing_page/page.dart`
+      - 播放页标题/艺术家支持滚动展示，解决长文本截断。
+  - 阶段二 `[10]` 音量均衡（ReplayGain）
+    - `lib/app_preference.dart`
+    - `lib/play_service/playback_service.dart`
+    - `lib/page/settings_page/other_settings.dart`
+    - `lib/page/settings_page/page.dart`
+      - 新增“音量均衡开关 + 预增益（-12dB~12dB）”，播放时按曲目 ReplayGain 自动补偿音量。
+  - 阶段二 `[11]` CUE 支持（扫描、播放、歌词）
+    - `rust/src/api/tag_reader.rs`
+      - 支持解析 `.cue`，生成虚拟分轨并写入 `source_path/cue_start_ms/cue_end_ms`。
+      - 扫描时跳过已被 CUE 覆盖的原始整轨文件，避免重复。
+    - `lib/library/audio_library.dart`
+    - `lib/play_service/playback_service.dart`
+    - `lib/play_service/lyric_service.dart`
+    - `lib/lyric/lrc.dart`
+    - `lib/page/audio_detail_page.dart`
+      - Dart 侧接入 CUE 字段，播放时按分段起止时间播放。
+      - 封面/本地歌词读取走 `source_path`，本地 LRC 按 CUE 片段裁剪并重定位时间轴。
+      - 音频详情页“在资源管理器中显示”改为打开真实媒体文件路径。
+  - 阶段二 `[12]` 桌面歌词记忆
+    - `lib/app_preference.dart`
+    - `lib/play_service/desktop_lyric_service.dart`
+    - `lib/page/updating_page.dart`
+      - 新增桌面歌词偏好持久化：上次开启状态、锁定状态、歌词主题色。
+      - 启动时自动恢复桌面歌词开启状态，并复用上次主题色。
+      - 接收并持久化桌面歌词发回的偏好变更消息（颜色）。
+- 任务清单回写：
+  - `TASK_LIST.md` 已将阶段一 `[3]`、阶段二 `[7]-[12]` 标记为完成（`[✔]`）。
+- 验证：
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+- 备注：
+  - 受当前 `desktop_lyric` 协议限制，播放器侧暂无字体大小/窗口位置的回传字段；本次已完成可由播放器控制与持久化的开启状态、锁定状态与主题色记忆。
+
+### 会话 18：阶段二回归修复（长歌名异常字形、跨文件夹重复、桌面歌词开关记忆）
+- 触发原因：
+  - 用户反馈长歌名滚动时出现异常图形字符。
+  - 用户反馈不同音乐文件夹存在相同歌曲仍重复显示。
+  - 用户反馈桌面歌词开关重启后会重置，记忆不生效。
+- 修复内容：
+  - 长歌名滚动异常
+    - `lib/page/now_playing_page/page.dart`
+      - 滚动文本新增清洗逻辑：过滤控制字符/BOM/替代字符，避免异常占位字形被渲染。
+  - 跨文件夹重复歌曲
+    - `rust/src/api/tag_reader.rs`
+      - 去重逻辑由“仅路径”增强为“路径 + 元数据指纹”双重去重：
+        - 指纹包含标题/艺术家/专辑/碟号/音轨/时长/码率/采样率/CUE 分段/源文件名。
+      - 索引版本升级到 `112`，确保旧索引在下次更新时触发全量刷新并重新去重。
+  - 桌面歌词记忆不生效
+    - `lib/play_service/desktop_lyric_service.dart`
+      - 修复进程结束时误写回 `enabled=false` 的问题，避免应用退出时把“开启状态”覆盖掉。
+      - `killDesktopLyric` 增加 `disablePreference` 参数，仅在用户显式关闭时写回关闭状态。
+      - 保持“上次开启”状态可在下次启动自动恢复。
+- 验证：
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 19：残留歌词进程与滚动溢出回归修复（双歌词残留、黄黑条）
+- 触发原因：
+  - 用户反馈退出播放器后桌面歌词进程残留，重启后可叠加多个歌词窗口且旧窗口不可控。
+  - 用户反馈长标题滚动仍出现黄黑条/异常显示。
+- 处理过程：
+  - 先执行一次现场清理：强制结束当前残留 `desktop_lyric.exe` 进程（2 个），确认清零。
+- 修复内容：
+  - 桌面歌词残留进程
+    - `windows/runner/flutter_window.cpp`
+    - `windows/runner/flutter_window.h`
+      - 新增原生方法 `TerminateDesktopLyricProcesses()`，枚举并结束 `desktop_lyric.exe`。
+      - 在托盘“退出”路径与窗口销毁 `OnDestroy` 中统一调用，确保应用退出时不遗留歌词进程。
+  - 桌面歌词开关记忆语义修正
+    - `lib/play_service/desktop_lyric_service.dart`
+      - 仅在“用户显式关闭桌面歌词”时写回 `enabled=false`；
+      - 进程被动退出/应用退出不再错误覆盖开启记忆。
+  - 长标题滚动黄黑条
+    - `lib/page/now_playing_page/page.dart`
+      - 滚动内容容器 `Row` 改为 `mainAxisSize: MainAxisSize.min`，避免调试态 `RenderFlex overflow` 黄黑条。
+  - 重复歌曲去重稳健性增强
+    - `rust/src/api/tag_reader.rs`
+      - 去重指纹补充文件大小维度，降低“同元数据但不同歌曲”误判概率。
+- 验证：
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 20：滚动显示与桌面歌词手动恢复逻辑回归修复
+- 触发原因：
+  - 用户反馈长歌名滚动仍出现异常显示（黄黑条/溢出样式）。
+  - 用户要求桌面歌词改为“仅手动打开”，且手动关闭后再次打开要保留上次状态；重启应用后不应自动弹出。
+- 本轮修改：
+  - `lib/page/now_playing_page/page.dart`
+    - 将 `_MarqueeTextScrollable` 的滚动内容改为 `UnconstrainedBox + Row`，避免 `RenderFlex overflow` 导致的黄黑条。
+  - `lib/page/updating_page.dart`
+    - 移除启动阶段的 `restoreFromPreferenceIfNeeded()` 调用，禁止应用启动时自动恢复桌面歌词。
+  - `lib/app_preference.dart`
+    - `DesktopLyricPreference` 新增并持久化 `windowLeft/windowTop`，用于记忆桌面歌词窗口位置。
+  - `lib/window_controls.dart`
+    - 新增与原生通道交互方法：读取桌面歌词窗口矩形、设置桌面歌词窗口位置。
+  - `windows/runner/flutter_window.h`
+  - `windows/runner/flutter_window.cpp`
+    - 扩展 `coriander_player/window_controls` 原生方法：
+      - `get_desktop_lyric_rect`
+      - `set_desktop_lyric_position`
+    - 通过 PID 精确定位 `desktop_lyric.exe` 窗口，并返回/设置窗口坐标。
+  - `lib/play_service/desktop_lyric_service.dart`
+    - 保留 `restoreFromPreferenceIfNeeded()` 为空实现（兼容旧调用），不再自动打开桌面歌词。
+    - 新增桌面歌词窗口位置同步逻辑：
+      - 运行期间定时保存位置；
+      - 手动关闭前强制保存位置；
+      - 手动启动后按已保存位置恢复窗口。
+    - 修正受损字符串常量，避免语法错误。
+- 额外处理：
+  - 按用户要求再次确认清理残留进程：`desktop_lyric.exe` 当前无残留。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter build windows --debug` -> 成功
+
+### 会话 21：滚动黄黑条残留与桌面歌词记忆兜底增强
+- 触发原因：
+  - 用户反馈长歌名滚动仍有异常显示（黄黑条）。
+  - 用户反馈桌面歌词记忆仍未生效（但退出后残留进程问题已解决）。
+- 修复内容：
+  - `lib/page/now_playing_page/page.dart`
+    - 将滚动容器从 `UnconstrainedBox` 调整为 `OverflowBox(minWidth:0, maxWidth:double.infinity)`。
+    - 目的：避免 `UnconstrainedBox` 在调试模式下对超界子项继续绘制黄黑条提示。
+  - `lib/play_service/desktop_lyric_service.dart`
+    - 位置恢复函数改为返回 `bool`，并将重试次数由 8 次提升到 20 次（每次 120ms）。
+    - 启动流程调整为“先恢复窗口位置，再启动定时位置同步”，避免启动早期默认位置反向覆盖历史位置。
+    - 位置同步定时器周期由 700ms 调整为 300ms，提升拖动后快速退出场景下的位置保存概率。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter build windows --debug` -> 成功
+- 现场状态：
+  - `desktop_lyric.exe` 当前无残留进程。
+
+### 会话 22：紧急回归修复（整窗不可点击）与桌面歌词记忆兜底
+- 触发原因：
+  - 用户反馈点击歌曲后主窗口出现“整窗不可点击”，鼠标呈窗口调整样式，仅边缘可拖拽。
+  - 截图显示 `BOTTOM OVERFLOWED BY Infinity PIXELS`，定位为长歌名滚动组件引入的 Infinity 约束回归。
+- 修复内容：
+  - `lib/page/now_playing_page/page.dart`
+    - 移除 `OverflowBox(maxWidth: double.infinity)` 实现。
+    - 改为 `IgnorePointer + SingleChildScrollView(horizontal, NeverScrollable)` 承载滚动文本，保留外层 `ClipRect + Transform`。
+    - 目的：彻底消除 Infinity 布局导致的溢出/命中异常，避免影响窗口交互。
+  - `lib/window_controls.dart`
+    - `setDesktopLyricPosition` 的 `pid` 参数改为可选，支持按标题回退定位。
+  - `lib/play_service/desktop_lyric_service.dart`
+    - 位置读取改为“双路径兜底”：先按 PID 读取，失败后按标题读取。
+    - 位置恢复改为“双路径兜底”：先按 PID 设置，失败后按标题设置。
+    - 目的：提升桌面歌词记忆在边缘场景下的成功率。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 23：桌面歌词记忆补强 + 启动音量过大修复
+- 触发原因：
+  - 用户反馈桌面歌词位置/颜色仍未记住。
+  - 用户反馈播放器每次启动音量都接近 100%，过大。
+- 本轮修复（仓库内）：
+  - `lib/main.dart`
+    - 将 `WindowControls.init()` 从“读取偏好前”移动到“读取偏好后”。
+    - 目的：避免 `PlaybackService` 过早初始化并持有默认音量引用（1.0）。
+  - `lib/app_preference.dart`
+    - `PlaybackPreference` 默认音量从 `1.0` 下调至 `0.2`。
+    - `read()` 改为“就地更新对象字段”而非整体替换，避免已持有引用的服务读取不到最新偏好。
+    - 对历史异常数据增加保护：读取到 `volumeDsp >= 0.999` 时自动降级为 `0.2` 并回写。
+  - `lib/play_service/desktop_lyric_service.dart`
+    - 启动桌面歌词时将实际使用的主题颜色（primary/surfaceContainer/onSurface）写回偏好。
+    - stdout 解析升级为“支持分片 + 换行 + 单包 JSON”的稳健解析，减少偏好消息丢失。
+- 本轮修复（本机桌面歌词运行时）：
+  - 基于 `desktop_lyric` 源码补充颜色选择后的 `PreferenceChangedMessage` 回传，并为控制消息追加换行分隔。
+  - 重新构建并替换：`E:\Coriander Player\desktop_lyric\`（已自动备份旧目录到 `desktop_lyric_backup_时间戳`）。
+  - 目的：让主播放器能接收到桌面歌词颜色变更并持久化。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter build windows --debug` -> 成功
+### 会话 24：桌面歌词位置记忆定向修复（窗口识别增强）
+- 触发原因：
+  - 用户反馈：颜色记忆生效、音量合适，但桌面歌词位置仍未记住。
+- 本轮修改：
+  - `windows/runner/flutter_window.cpp`
+    - PID 查窗从“首个顶层窗”改为“可见 + 非最小化 + 无 owner”，并优先匹配标题 `desktop_lyric`。
+    - 标题回退查窗由 `FindWindowW` 改为枚举筛选，避免命中无效窗口。
+  - `lib/play_service/desktop_lyric_service.dart`
+    - 位置同步优先按 PID 读取；仅在 PID 缺失时才走标题回退，减少误命中。
+    - 位置恢复改为“优先 PID、后置标题回退（第 11 次尝试后）”，提升启动早期稳定性。
+    - 增加位置恢复/保存日志（`LOGGER.i`）：记录恢复目标、成功通道、保存坐标、失败信息，便于后续实测定位。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+  - `cargo check` -> 成功### 会话 25：桌面歌词位置恢复动画平滑优化（记忆功能稳定后）
+- 触发原因：
+  - 用户确认位置/颜色记忆可用，但反馈“恢复到记忆位置时动画过于生硬”。
+- 本轮修改：
+  - `lib/play_service/desktop_lyric_service.dart`
+    - 新增 `_animateDesktopLyricWindowTo(...)`，将窗口恢复改为短时平滑插值移动（ease-out）。
+    - 按位移距离自适应步数（4/7/10 步），每步约 14ms，避免打开歌词窗口时瞬移突兀。
+    - 保留原有 PID 优先、标题回退与直接定位兜底逻辑，确保稳定性不回退。
+- 关联说明（本阶段连续修复汇总）：
+  - 会话 23：修复偏好读取时序与默认音量，解决启动音量过大。
+  - 会话 24：增强 Windows 侧歌词窗口识别（可见/非最小化/优先标题），提升位置记忆命中率。
+  - 会话 25：在记忆正确的前提下优化恢复过渡体验，降低视觉跳变。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+## 2026-04-15
+
+### 会话 26：阶段一/二收尾与全量自测（快捷键编译修复 + DTS 支持）
+- 目标：
+  - 基于当前未提交改动继续收尾阶段一、阶段二任务。
+  - 完成最低验证矩阵：`flutter analyze`、`cargo check`、`flutter build windows --debug`。
+- 本轮修复：
+  - `lib/app_preference.dart`
+    - 修复 Flutter 键盘 API 兼容问题：将 `PhysicalKeyboardKey.*.keyId` 改为 `usbHidUsage`，恢复快捷键默认值与反序列化逻辑可编译。
+  - `lib/hotkeys_helper.dart`
+    - 修复 `LOGGER.e` 参数签名不匹配，改为 `error` / `stackTrace` 命名参数。
+  - `lib/page/settings_page/other_settings.dart`
+    - 补充 `app_preference.dart` 导入，修复 `HotkeyBindingPreference` 类型缺失。
+    - 录制快捷键与鼠标侧键映射改用 `usbHidUsage`，避免键值读取报错。
+  - `lib/page/folders_page.dart`
+    - 补充 `dart:io` 与 `app_settings.dart` 导入，修复 `getAppDataDir` 未定义。
+    - `FutureBuilder` 显式泛型为 `Directory`，修复 `BuildIndexStateView.indexPath` 类型不匹配。
+  - `lib/page/now_playing_page/page.dart`
+    - 补充 `dart:async` 导入，修复 `Timer` 未定义。
+- 阶段二 [29] DTS 支持补齐：
+  - `rust/src/api/tag_reader.rs`
+    - `SUPPORT_FORMAT` 增加 `"dts" => false`，使 DTS 文件可进入索引与元数据兜底读取流程。
+  - `lib/src/bass/bass_player.dart`
+    - 新增可选插件加载机制：`bass_aac.dll` 作为可选插件加载（存在则启用扩展格式支持，缺失时仅告警不阻断启动）。
+    - 保留原有必需插件强校验，避免回归。
+- 任务清单回写：
+  - `TASK_LIST.md` 已将阶段一 `[4]-[9]`、阶段二 `[13]-[29]` 标记为 `[✔]`。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `cargo check`（`rust/`）-> 成功
+  - `flutter build windows --debug` -> 成功
+- 风险与备注：
+  - DTS 实际播放依赖 `BASS/bass_aac.dll` 运行时可用性；当前已做“可选加载 + 非致命降级”，不会因插件缺失导致应用启动失败。
+
+## 2026-04-16
+
+### 会话 27：右键菜单“添加到歌单”增强 + 后台快捷键白名单
+- 目标：
+  - 在音乐条目右键菜单的“添加到歌单”中支持“新建歌单并添加当前歌曲”。
+  - 后台（窗口失焦）可用快捷键改为白名单，不包含：播放/暂停、显示/隐藏桌面歌词、返回上一页、退出程序。
+- 本轮修改：
+  - `lib/component/audio_tile.dart`
+    - “添加到歌单”子菜单新增：`新建歌单并添加`。
+    - 新建时增加重名校验，成功后自动加入当前歌曲并持久化（`scheduleSavePlaylists()`）。
+    - 歌单为空时显示“暂无歌单”；已有歌单时保持原有添加逻辑。
+  - `lib/hotkeys_helper.dart`
+    - 新增窗口焦点+输入焦点驱动的快捷键注册模式：
+      - 前台（窗口聚焦）：注册全部快捷键；
+      - 后台（窗口失焦）：仅注册白名单（上一首/下一首/音量加/音量减/静音/显示隐藏主界面）；
+      - 文本输入聚焦：暂时取消注册，避免录入冲突。
+    - `updateBinding` 改为按当前模式重新应用注册，避免无条件全量注册。
+    - 接入 `WindowListener`，在 `onWindowFocus/onWindowBlur` 自动切换前后台快捷键集合。
+  - `lib/main.dart`
+    - 热键初始化改为在窗口初始化后执行 `HotkeysHelper.init()`，由状态机统一接管注册策略。
+  - `lib/page/settings_page/other_settings.dart`
+    - 快捷键设置页提示文案补充后台生效范围说明，明确四项后台不响应动作。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功
+
+### 会话 28：阶段一/二回归修复（托盘最大化恢复、多选添加/删除、背景刷新、快捷键细化）
+- 触发原因：
+  - 用户回归反馈托盘恢复未保持最大化、多选“添加到歌单”无响应、缺少批量删除选项。
+  - 用户反馈静音默认快捷键、音量步进、播放次数排序展示、详情页定位按钮、背景刷新、播放页控件自动隐藏交互不符合预期。
+- 本轮修改：
+  - `windows/runner/flutter_window.cpp`
+    - 托盘前最大化状态改为 `GetWindowPlacement + IsZoomed` 双判定。
+    - 托盘恢复改为按状态使用 `SW_SHOWMAXIMIZED / SW_SHOWNORMAL`，避免恢复后丢失最大化状态。
+  - `lib/page/uni_page_components.dart`
+    - 多选“添加到歌单”改为弹窗选歌单；无歌单时可直接创建歌单并添加。
+    - 新增 `DeleteSelectedAudios` 批量删除动作：可选“删除源文件”或“仅从播放器移除”。
+  - `lib/page/audios_page.dart` `lib/page/album_detail_page.dart` `lib/page/artist_detail_page.dart` `lib/page/folder_detail_page.dart`
+    - 多选工具栏接入批量删除按钮。
+    - 音乐页在“播放次数排序”下显示每首歌的播放次数。
+  - `lib/component/audio_tile.dart`
+    - 新增 `showPlayCount` 展示开关，用于在条目副标题显示播放次数。
+  - `lib/library/audio_library.dart`
+    - 新增批量移除接口 `removeAudiosByPaths`，用于多选删除后一次性重建集合。
+  - `lib/app_preference.dart`
+    - 静音默认快捷键改为 `Alt+M`。
+    - 兼容迁移：若历史配置仍为旧默认 `M`，自动迁移为 `Alt+M` 并保存。
+  - `lib/hotkeys_helper.dart`
+    - 音量快捷键步进由 `0.05` 调整为 `0.01`（即 1%）。
+  - `lib/page/audio_detail_page.dart`
+    - 增强“定位到音乐列表”按钮可见性（改为标题区明显按钮）。
+  - `lib/app_settings.dart` `lib/component/app_shell.dart` `lib/page/settings_page/theme_settings.dart`
+    - 新增背景刷新通知机制（`backgroundVersion`），修复自定义背景设置后不即时生效。
+  - `lib/page/now_playing_page/page.dart`
+    - 控件自动隐藏时间改为 5 秒。
+    - 交互监听增加 `HitTestBehavior.translucent`，点击歌词左侧/控件区域也可唤醒控件。
+- 验证：
+  - `flutter analyze` -> `No issues found!`
+  - `flutter build windows --debug` -> 成功（首次因进程占用触发 `LNK1168`，结束占用进程后重试成功）
+  - `cargo check`（`rust/`）-> 成功
+
+### 会话 29：桌面歌词字体/RGB + 字母索引/背景/静音回归修复
+- 目标：
+  - 修复 `Alt+M` 二次触发后音量不恢复静音前值。
+  - 修复自定义背景仍不可见。
+  - 修复字母索引 UI（高度贴合、选中高亮、下方独立定位按钮）并支持中文歌名索引。
+  - 在外部 `desktop_lyric` 源码补齐“歌词字体选择 + RGB 颜色输入”。
+- 主仓改动：
+  - `lib/hotkeys_helper.dart`
+    - 新增 `_lastNonZeroVolume` 缓存并改造静音切换逻辑：静音时记住当前音量，取消静音时恢复。
+    - 音量加减沿用 1% 步进，同时同步刷新可恢复音量。
+  - `lib/page/page_scaffold.dart`
+    - 在存在有效自定义背景图时，将页面表层背景改为半透明 `scheme.surface`，确保背景图可透出。
+  - `lib/page/uni_page.dart`
+    - 右侧字母索引改为内容自适应高度（不再拉满整列）。
+    - 新增当前选中字母高亮样式。
+    - 在字母索引下方新增独立“定位当前音乐”按钮（`Icons.my_location`）。
+  - `lib/page/audios_page.dart`
+    - 字母定位逻辑新增中文首字拼音首字母映射（A-Z），`#` 兜底非字母项。
+- 外部 `desktop_lyric` 改动：
+  - `lib/component/foreground.dart`
+    - `TextDisplayController` 新增 `lyricFontFamily` 与 `setLyricFontFamily`。
+  - `lib/component/lyric_line_display_area.dart`
+  - `lib/component/now_playing_info.dart`
+    - 歌词和正在播放信息统一应用 `lyricFontFamily`。
+  - `lib/component/action_row.dart`
+    - 新增字体选择菜单（控制栏字体按钮）。
+    - 调色板菜单新增 RGB 输入弹窗（R/G/B 0-255）与“跟随播放器主题”。
+    - 颜色改动后继续通过 `PreferenceChangedMessage` 同步回播放器。
+- 验证：
+  - 主仓：
+    - `flutter analyze` ✅
+    - `cargo check`（`rust/`）✅
+    - `flutter build windows --debug` ✅
+  - 外部 `desktop_lyric`：
+    - 由于 Flutter 不允许在 Pub Cache 目录执行 `pub get/analyze`，改为镜像到 `E:\PyCharmSave\desktop_lyric_verify` 验证。
+    - `flutter pub get` ✅
+    - `flutter analyze` ✅（仅 lint 提示，无编译错误）
+    - `flutter build windows --debug` ✅
+
+### 会话 30：执行替换 + 字母索引交互修正
+- 目标：
+  - 执行 `desktop_lyric` 与主程序二进制替换。
+  - 修复字母索引“点击不高亮、定位按钮不显示、中文命中不稳定”。
+- 代码修复：
+  - `lib/page/uni_page.dart`
+    - 新增 `LocateIndexResolver`，支持“不依赖 `locateTo` 也能定位当前播放”。
+    - 字母点击后立即高亮（不再依赖是否找到目标项）。
+    - 右侧定位按钮显示条件改为 `locateTo != null || locateIndexResolver != null`。
+  - `lib/page/audios_page.dart`
+    - 新增 `PlayService` 定位解析：定位按钮按当前播放歌曲 path 跳转。
+    - 首字母解析调整为“跳过前缀空白/符号/数字后，寻找首个有效英文或中文拼音首字母”，提升中文命中率。
+- 验证：
+  - `flutter analyze`（主仓）✅
+  - `flutter build windows --release`（主仓）✅
+  - `flutter build windows --release`（`desktop_lyric_verify`）✅
+- 替换执行：
+  - 停止进程：`coriander_player.exe`、`desktop_lyric.exe`
+  - 备份目录：`E:\Coriander Player\backup_20260416_015759`
+  - 覆盖部署：
+    - 主程序：`E:\PyCharmSave\coriander_player\build\windows\x64\runner\Release` -> `E:\Coriander Player`
+    - 桌面歌词：`E:\PyCharmSave\desktop_lyric_verify\build\windows\x64\runner\Release` -> `E:\Coriander Player\desktop_lyric`
+  - 关键文件时间确认：
+    - `E:\Coriander Player\coriander_player.exe` -> `2026-04-16 01:54:58`
+    - `E:\Coriander Player\desktop_lyric\desktop_lyric.exe` -> `2026-04-16 01:57:28`
+
+### 会话 31：排序/定位按钮/乱码清理 + desktop_lyric 字体与 RGB 修复
+- 目标：
+  - 修复中英文排序仍分段问题（示例：`稻dao香` 应在 `Love Story` 前）。
+  - 修复字母索引高亮与定位按钮可见性问题。
+  - 清理当前发现的编码污染注释。
+  - 修复外部 `desktop_lyric` 字体列表为空与 RGB 设置面板体验问题。
+- 主仓改动：
+  - `lib/utils.dart`
+    - 新增 `toLocaleSortKey()`：统一中英文、拼音、符号处理后再排序，避免中英文分段。
+    - `localeCompareTo()` 改为优先使用统一排序键比较，再回退原比较路径。
+  - `lib/page/audios_page.dart`
+    - 字母索引命中逻辑改为基于 `toLocaleSortKey()`，中文按拼音首字母参与 A-Z 定位。
+  - `lib/page/uni_page.dart`
+    - 右侧索引区改为自适应高度布局，点击即高亮。
+    - “定位当前音乐”按钮改为独立浮动按钮并固定显示，不再依赖索引布局。
+  - `lib/app_preference.dart`
+    - 清理桌面歌词偏好相关注释乱码。
+- 外部 `desktop_lyric` 改动（同步到 `E:\PyCharmSave\desktop_lyric_verify` 与 pub cache）：
+  - `lib/desktop_lyric_controller.dart`
+    - `InstalledFontsMessage` 解析增强：去重排序并兜底包含 `currentFontFamily`。
+  - `lib/component/foreground.dart`
+    - 字体初始化逻辑改为“用户未手动选择前可跟随播放器同步更新”。
+  - `lib/component/action_row.dart`
+    - 字体选择弹窗改为 `ValueListenableBuilder` 实时监听字体同步结果。
+    - 增加字体列表合并逻辑（安装字体 + 当前播放器字体）。
+    - RGB 弹窗增加预览区、输入联动、窗口高度兜底与 `context.mounted` 判定。
+- 验证：
+  - 主仓：
+    - `flutter analyze` ✅（No issues found）
+    - `flutter build windows --release` ✅
+    - `flutter test tools/sort_smoke_test.dart` ✅（2 个用例通过）
+  - 外部 `desktop_lyric_verify`：
+    - `flutter analyze` ⚠️（仅现存 lint/warning，未出现编译错误）
+    - `flutter build windows --release` ✅
+- 替换执行：
+  - 停止进程：`coriander_player.exe`、`desktop_lyric.exe`
+  - 备份目录：`E:\Coriander Player\backup_20260416_183444`
+  - 覆盖部署：
+    - 主程序：`E:\PyCharmSave\coriander_player\build\windows\x64\runner\Release` -> `E:\Coriander Player`
+    - 桌面歌词：`E:\PyCharmSave\desktop_lyric_verify\build\windows\x64\runner\Release` -> `E:\Coriander Player\desktop_lyric`
+  - 关键产物时间：
+    - `E:\Coriander Player\data\app.so` -> `2026-04-16 18:22:48`
+    - `E:\Coriander Player\desktop_lyric\data\app.so` -> `2026-04-16 18:32:44`
+  - 桌面歌词最终版二次覆盖备份：`E:\Coriander Player\backup_lyric_20260416_183646`
+
+### 会话 32：随机模式下上一首/下一首统一随机
+- 目标：
+  - 更新随机播放行为：当随机模式开启时，点击“下一首”与“上一首”都执行随机切歌，不走固定前后顺序。
+  - 避免出现“下一首随机后，上一首立刻回到上一曲”的回跳体验。
+- 改动文件：
+  - `lib/play_service/playback_service.dart`
+    - 新增 `_lastManualRandomSourceIndex` 用于记录上一次手动随机切歌的来源索引。
+    - 新增 `_nextAudio_shuffleRandom()`，在随机模式下统一选取候选歌曲：
+      - 默认排除当前曲目，避免重复当前播放；
+      - 当列表长度大于 2 时，额外排除上一次来源曲目，减少立刻回跳。
+    - `nextAudio()` 与 `lastAudio()` 在 `shuffle == true` 时均改为调用 `_nextAudio_shuffleRandom()`。
+    - 在非随机模式下保留原有顺序上一首/下一首逻辑，并清空随机来源索引缓存。
+- 验证：
+  - `dart format lib/play_service/playback_service.dart` ✅
+  - `flutter analyze` ✅（No issues found）
+  - `flutter build windows --debug` ✅
+
+### 会话 33：桌面歌词字体弹窗可见性修复并覆盖部署
+- 目标：
+  - 修复桌面歌词“歌词字体”选择弹窗显示异常（弹窗空白/被裁剪）。
+  - 完成 release 并覆盖 `E:\Coriander Player` 的桌面歌词组件。
+- 改动文件：
+  - `E:\PyCharmSave\desktop_lyric_verify\lib\component\action_row.dart`
+    - 字体弹窗打开前增加窗口高度兜底（最小 560），关闭后恢复 `resizeWithForegroundSize()`。
+    - 字体弹窗显式设置 `backgroundColor`/`surfaceTintColor`，避免在特定主题下文本不可见。
+    - 字体勾选图标、关闭按钮文本统一使用 `theme.onSurface`，提升对比度稳定性。
+  - 同步上述文件到 pub cache：
+    - `C:\Users\reneryi\AppData\Local\Pub\Cache\git\desktop_lyric-536be8df55c80a7fdf7cc20f603d3fc76a732821\lib\component\action_row.dart`
+- 验证：
+  - `flutter analyze`（`desktop_lyric_verify`）⚠️（仅历史命名风格 info，无编译错误）
+  - `flutter build windows --release`（`desktop_lyric_verify`）✅
+- 覆盖部署：
+  - 备份目录：`E:\Coriander Player\backup_lyric_20260416_210446`
+  - 覆盖目标：`E:\Coriander Player\desktop_lyric`
+  - 校验：
+    - 源构建产物 `data/app.so`：`2026-04-16 21:04:31`
+    - 目标部署产物 `data/app.so`：`2026-04-16 21:04:31`
+
+### 会话 34：随机播放修复版本补发覆盖（主程序）
+- 触发原因：
+  - 用户反馈“随机播放更新没有覆盖到 `E:\Coriander Player`”。
+- 执行内容：
+  - 在主仓重新执行 `flutter build windows --release` 生成发布包。
+  - 停止 `coriander_player.exe` / `desktop_lyric.exe` 后，对安装目录执行整包备份与覆盖。
+- 替换执行：
+  - 备份目录：`E:\Coriander Player\backup_20260416_211106`
+  - 覆盖来源：`E:\PyCharmSave\coriander_player\build\windows\x64\runner\Release`
+  - 覆盖目标：`E:\Coriander Player`
+- 校验：
+  - 源 `data/app.so` SHA256：`089C783081112CA8E71C3B60A4D8B14D71F9DB60ACDB930540C337B116996B77`
+  - 目标 `data/app.so` SHA256：`089C783081112CA8E71C3B60A4D8B14D71F9DB60ACDB930540C337B116996B77`
+  - 结论：主程序已与本次 release 产物完全一致，随机播放修复已覆盖到安装目录。
+
+### 会话 35：上传前审查问题闭环（依赖可复现 + CI 补齐）
+- 触发原因：
+  - 上传前审查指出三类问题：`desktop_lyric` 修复不可复现、CI 对 DTS 与质量检查覆盖不足、发布基线不可验证。
+- 修复内容：
+  - 依赖可复现化（P0）：
+    - 将 `desktop_lyric` 源码纳入仓库：`third_party/desktop_lyric`（包含已修复的字体弹窗/RGB/字体同步逻辑）。
+    - 主工程依赖从 git 改为本地路径：
+      - `pubspec.yaml`：`desktop_lyric: path: third_party/desktop_lyric`
+      - `pubspec.lock`：`desktop_lyric` 来源更新为 `source: path`
+  - CI 完整性补齐（P1）：
+    - 重写 `/.github/workflows/windows_ci.yml`：
+      - 触发改为 `workflow_dispatch + push(main) + pull_request`
+      - 主程序流水线增加：`flutter analyze`、`cargo check`、`flutter test tools/sort_smoke_test.dart`、`flutter build windows --release`
+      - BASS 下载补齐 `bassaac24.zip`，产物中包含 `bass_aac.dll`（DTS 相关插件）
+      - 新增 `desktop_lyric` 独立构建流水线（在 `third_party/desktop_lyric` 下 analyze + windows release build）
+  - 主仓分析稳定性（P1）：
+    - `analysis_options.yaml` 增加 `exclude: third_party/desktop_lyric/**`，避免主仓 analyze 被第三方代码风格告警干扰。
+- 验证：
+  - `flutter pub get`（主仓）✅
+  - `flutter analyze`（主仓）✅
+  - `cargo check`（`rust/`）✅
+  - `flutter test tools/sort_smoke_test.dart` ✅
+  - `flutter build windows --release`（主仓）✅
+  - `flutter build windows --release`（`third_party/desktop_lyric`）✅
+- 结论：
+  - 审查结论中的阻塞项已闭环，当前仓库可作为“阶段一+阶段二完成版”发布基线。

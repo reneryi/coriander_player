@@ -1,0 +1,12 @@
+CompileFlags:
+  Add:
+    - -std=c++17
+    - -Iwindows
+    - -Iwindows/flutter/ephemeral
+    - -Iwindows/flutter/ephemeral/.plugin_symlinks/hotkey_manager_windows/windows
+    - -Iwindows/flutter/ephemeral/.plugin_symlinks/screen_retriever/windows
+    - -Iwindows/flutter/ephemeral/.plugin_symlinks/window_manager/windows
+    - -Iwindows/flutter/ephemeral/.plugin_symlinks/rust_lib_coriander_player/windows
+# Flutter Engine include paths vary by local SDK path.
+# If your IDE still shows missing Flutter C++ headers, add local engine include
+# paths in your user-level clangd config instead of hardcoding them here.
