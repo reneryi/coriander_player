@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   go_router: ^14.0.1 
-  material_color_utilities: ^0.11.1
+  material_color_utilities: ^0.13.0
   window_manager: ^0.3.8
   provider: ^6.1.1
   # rust_builder:
@@ -27,9 +27,7 @@ dependencies:
   flex_color_picker: ^3.5.0
   filepicker_windows: ^2.1.4
   desktop_lyric:
-    git:
-      url: https://github.com/Ferry-200/desktop_lyric.git
-      ref: 536be8df55c80a7fdf7cc20f603d3fc76a732821
+    path: third_party/desktop_lyric
   music_api:
     git:
       url: https://github.com/Ferry-200/music_api_dart.git
