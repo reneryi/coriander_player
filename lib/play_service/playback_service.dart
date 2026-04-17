@@ -512,6 +512,11 @@ class PlaybackService extends ChangeNotifier {
   /// 与 [start] 的差别在于它会通知重绘组件
   void playAgain() => _nextAudio_singleLoop();
 
+  /// 外部修改了当前播放歌曲的标签/封面后调用，通知 UI 刷新
+  void refreshNowPlaying() {
+    notifyListeners();
+  }
+
   void seek(double position) {
     final audio = nowPlaying;
     if (audio != null && audio.isCueTrack) {

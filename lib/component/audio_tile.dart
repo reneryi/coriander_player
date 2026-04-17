@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:coriander_player/app_paths.dart' as app_paths;
+import 'package:coriander_player/app_settings.dart';
 import 'package:coriander_player/component/scroll_aware_future_builder.dart';
 import 'package:coriander_player/library/audio_library.dart';
 import 'package:coriander_player/library/audio_metadata_override_store.dart';
@@ -9,6 +13,7 @@ import 'package:coriander_player/lyric/lyric_source.dart';
 import 'package:coriander_player/music_matcher.dart';
 import 'package:coriander_player/page/uni_page.dart';
 import 'package:coriander_player/play_service/play_service.dart';
+import 'package:coriander_player/src/rust/api/tag_reader.dart' as tag_writer;
 import 'package:coriander_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -345,6 +350,7 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
       uniSearch(widget.audio);
   bool _busy = false;
 
+  /// 保存标签覆盖到 JSON 文件，并同步更新 index.json 使修改持久化
   Future<void> _saveOverride() async {
     final title = titleController.text.trim();
     final artist = artistController.text.trim();
@@ -354,19 +360,96 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
       return;
     }
 
-    await AudioMetadataOverrideStore.instance.setOverride(
-      audio: widget.audio,
-      title: title,
-      artist: artist,
-      album: album,
-    );
-    AudioLibrary.instance.rebuildCollectionsFromCurrentFolders();
+    setState(() {
+      _busy = true;
+    });
+
+    try {
+      await AudioMetadataOverrideStore.instance.setOverride(
+        audio: widget.audio,
+        title: title,
+        artist: artist,
+        album: album,
+      );
+
+      // 直接写入音乐文件的元数据标签（非 CUE 轨道）
+      if (!widget.audio.isCueTrack) {
+        final wrote = await tag_writer.writeTagToFile(
+          path: widget.audio.path,
+          title: title,
+          artist: artist,
+          album: album,
+        );
+        if (!wrote) {
+          LOGGER.e("标签写入文件失败: ${widget.audio.path}");
+        }
+      }
+
+      // 同步更新 index.json，使修改在重启/重建索引后依然保留
+      await _updateIndexJson(widget.audio, title, artist, album);
+
+      AudioLibrary.instance.rebuildCollectionsFromCurrentFolders();
+
+      // 如果当前正在播放该歌曲，刷新播放界面
+      final playbackService = PlayService.instance.playbackService;
+      if (playbackService.nowPlaying?.path == widget.audio.path) {
+        playbackService.refreshNowPlaying();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+
     if (mounted) {
-      showTextOnSnackBar("已保存音频标签覆盖");
+      showTextOnSnackBar("已保存音频标签");
       Navigator.pop(context);
     }
   }
 
+  /// 更新 index.json 中对应音频的元数据
+  Future<void> _updateIndexJson(
+    Audio audio,
+    String title,
+    String artist,
+    String album,
+  ) async {
+    try {
+      final supportPath = (await getAppDataDir()).path;
+      final indexFile = File("$supportPath\\index.json");
+      if (!indexFile.existsSync()) return;
+
+      final indexStr = await indexFile.readAsString();
+      final Map indexJson = json.decode(indexStr);
+      final List folders = indexJson["folders"] ?? [];
+
+      // 在 index.json 中查找并更新匹配的音频条目
+      bool found = false;
+      for (final folder in folders) {
+        final List audios = folder["audios"] ?? [];
+        for (int i = 0; i < audios.length; i++) {
+          if (audios[i]["path"] == audio.path) {
+            audios[i]["title"] = title;
+            audios[i]["artist"] = artist;
+            audios[i]["album"] = album;
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+
+      if (found) {
+        await indexFile.writeAsString(json.encode(indexJson));
+      }
+    } catch (err, trace) {
+      LOGGER.e("更新 index.json 失败", error: err, stackTrace: trace);
+    }
+  }
+
+  /// 设置在线歌词来源，保存后刷新正在播放的歌词
   Future<void> _applyLyricSource(SongSearchResult result) async {
     final source = switch (result.source) {
       ResultSource.qq => LyricSourceType.qq,
@@ -380,9 +463,16 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
       neteaseSongId: result.neteaseSongId,
     );
     await saveLyricSources();
+
+    // 如果当前正在播放该歌曲，立即刷新歌词显示
+    final playbackService = PlayService.instance.playbackService;
+    if (playbackService.nowPlaying?.path == widget.audio.path) {
+      PlayService.instance.lyricService.updateLyric();
+    }
     showTextOnSnackBar("已设置在线歌词来源");
   }
 
+  /// 应用在线封面，下载成功后刷新列表和播放页的封面显示
   Future<void> _applyCover(SongSearchResult result) async {
     final url = result.coverUrl;
     if (url == null || url.isEmpty) {
@@ -396,14 +486,48 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
       audio: widget.audio,
       url: url,
     );
-    setState(() {
-      _busy = false;
-    });
+    if (mounted) {
+      setState(() {
+        _busy = false;
+      });
+    }
     if (cover == null) {
       showTextOnSnackBar("在线封面应用失败");
       return;
     }
+    // 清除封面缓存并通知播放服务刷新 UI
     widget.audio.clearCoverCache();
+
+    // 将封面写入音乐文件的元数据标签（非 CUE 轨道）
+    if (!widget.audio.isCueTrack) {
+      try {
+        // 从 setCoverFromUrl 返回的缓存路径读取封面数据
+        final supportPath = (await getAppDataDir()).path;
+        final coverDir = "$supportPath\\cover_cache";
+        // 使用与 OnlineCoverStore 相同的命名规则找到缓存文件
+        final cacheBytes = utf8.encode(widget.audio.path);
+        final cacheNameBuilder = StringBuffer();
+        for (final item in cacheBytes) {
+          cacheNameBuilder.write(item.toRadixString(16).padLeft(2, '0'));
+        }
+        final coverCachePath = "$coverDir\\${cacheNameBuilder.toString()}.jpg";
+        final coverFile = File(coverCachePath);
+        if (coverFile.existsSync()) {
+          final coverBytes = await coverFile.readAsBytes();
+          await tag_writer.writeCoverToFile(
+            path: widget.audio.path,
+            coverData: coverBytes,
+          );
+        }
+      } catch (err, trace) {
+        LOGGER.e("封面写入文件失败", error: err, stackTrace: trace);
+      }
+    }
+
+    final playbackService = PlayService.instance.playbackService;
+    if (playbackService.nowPlaying?.path == widget.audio.path) {
+      playbackService.refreshNowPlaying();
+    }
     showTextOnSnackBar("已应用在线封面");
   }
 

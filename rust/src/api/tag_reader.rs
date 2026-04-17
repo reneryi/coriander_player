@@ -1203,6 +1203,144 @@ pub fn get_lyric_from_path(path: String) -> Option<String> {
     });
 }
 
+/// for Flutter
+/// 将标题、艺术家、专辑写入音乐文件的元数据标签
+/// 支持 ID3v2 (MP3)、VorbisComments (FLAC/OGG)、MP4Ilst (M4A) 等格式
+pub fn write_tag_to_file(
+    path: String,
+    title: String,
+    artist: String,
+    album: String,
+) -> bool {
+    use lofty::prelude::*;
+
+    let path_ref = Path::new(&path);
+    let tagged_file = match lofty::read_from_path(path_ref) {
+        Ok(val) => val,
+        Err(err) => {
+            log_to_dart(format!("write_tag_to_file: 无法读取文件 {:?}: {}", path, err));
+            return false;
+        }
+    };
+
+    let file_type = tagged_file.file_type();
+
+    // 获取首选标签类型
+    let tag_type = match file_type.primary_tag_type() {
+        tt => tt,
+    };
+
+    // 重新以可写方式打开
+    let mut tagged_file = match lofty::read_from_path(path_ref) {
+        Ok(val) => val,
+        Err(err) => {
+            log_to_dart(format!("write_tag_to_file: 无法重新读取文件: {}", err));
+            return false;
+        }
+    };
+
+    // 获取或创建主标签
+    let tag = match tagged_file.primary_tag_mut() {
+        Some(t) => t,
+        None => {
+            // 尝试插入新标签
+            tagged_file.insert_tag(lofty::tag::Tag::new(tag_type));
+            match tagged_file.primary_tag_mut() {
+                Some(t) => t,
+                None => {
+                    log_to_dart("write_tag_to_file: 无法创建标签".to_string());
+                    return false;
+                }
+            }
+        }
+    };
+
+    tag.set_title(title);
+    tag.set_artist(artist);
+    tag.set_album(album);
+
+    match tag.save_to_path(path_ref, lofty::config::WriteOptions::default()) {
+        Ok(_) => {
+            log_to_dart(format!("write_tag_to_file: 标签写入成功 {:?}", path));
+            true
+        }
+        Err(err) => {
+            log_to_dart(format!("write_tag_to_file: 写入失败: {}", err));
+            false
+        }
+    }
+}
+
+/// for Flutter
+/// 将封面图片数据写入音乐文件的元数据标签
+/// cover_data 为图片的原始字节（JPEG/PNG）
+pub fn write_cover_to_file(path: String, cover_data: Vec<u8>) -> bool {
+    use lofty::prelude::*;
+    use lofty::picture::{Picture, PictureType, MimeType};
+
+    let path_ref = Path::new(&path);
+    let file_type = match lofty::read_from_path(path_ref) {
+        Ok(val) => val.file_type(),
+        Err(err) => {
+            log_to_dart(format!("write_cover_to_file: 无法读取文件: {}", err));
+            return false;
+        }
+    };
+
+    let tag_type = file_type.primary_tag_type();
+
+    let mut tagged_file = match lofty::read_from_path(path_ref) {
+        Ok(val) => val,
+        Err(err) => {
+            log_to_dart(format!("write_cover_to_file: 无法重新读取文件: {}", err));
+            return false;
+        }
+    };
+
+    let tag = match tagged_file.primary_tag_mut() {
+        Some(t) => t,
+        None => {
+            tagged_file.insert_tag(lofty::tag::Tag::new(tag_type));
+            match tagged_file.primary_tag_mut() {
+                Some(t) => t,
+                None => {
+                    log_to_dart("write_cover_to_file: 无法创建标签".to_string());
+                    return false;
+                }
+            }
+        }
+    };
+
+    // 根据文件头判断 MIME 类型
+    let mime = if cover_data.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+        MimeType::Png
+    } else {
+        MimeType::Jpeg
+    };
+
+    let picture = Picture::new_unchecked(
+        PictureType::CoverFront,
+        Some(mime),
+        None,
+        cover_data,
+    );
+
+    // 移除旧封面，添加新封面
+    tag.remove_picture_type(PictureType::CoverFront);
+    tag.push_picture(picture);
+
+    match tag.save_to_path(path_ref, lofty::config::WriteOptions::default()) {
+        Ok(_) => {
+            log_to_dart(format!("write_cover_to_file: 封面写入成功 {:?}", path));
+            true
+        }
+        Err(err) => {
+            log_to_dart(format!("write_cover_to_file: 写入失败: {}", err));
+            false
+        }
+    }
+}
+
 /// for Flutter  
 /// 扫描给定路径下所有子文件夹（包括自己）的音乐文件并把索引保存在 index_path/index.json。
 pub fn build_index_from_folders_recursively(

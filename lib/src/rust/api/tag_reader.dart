@@ -6,9 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `_get_lyric_from_lofty`, `_get_lyric_from_lrc_file`, `_get_picture_by_lofty`, `_get_picture_by_windows`, `_update_index_below_1_1_0`, `new_with_path`, `read_by_lofty`, `read_by_win_music_properties`, `read_from_folder_recursively`, `read_from_folder`, `read_from_path`, `to_json_value`, `to_json_value`
+// These functions are ignored because they are not marked as `pub`: `_get_lyric_from_lofty`, `_get_lyric_from_lrc_file`, `_get_picture_by_lofty`, `_get_picture_by_windows`, `_update_index_below_1_1_0`, `audio_identity_key_from_audio`, `audio_identity_key_from_json`, `build_audio_identity_key`, `dedup_audio_folders_by_path`, `dedup_index_folders_json_by_path`, `file_size_for_identity`, `is_cue_path`, `is_unknown_text`, `merge_missing_fields`, `new_with_path`, `normalize_path_for_key`, `normalize_text_for_key`, `parse_cue_timestamp_to_frames`, `parse_cue_value`, `parse_replay_gain_db`, `read_by_lofty`, `read_by_win_music_properties`, `read_from_cue_path`, `read_from_folder_recursively`, `read_from_folder`, `read_from_path`, `sanitize_metadata_text`, `to_json_value`, `to_json_value`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioFolder`, `Audio`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `fmt`
 
 /// for Flutter
 /// 如果无法通过 Lofty 获取则通过 Windows 获取
@@ -22,6 +22,25 @@ Future<Uint8List?> getPictureFromPath(
 /// 以及相同目录相同文件名的 .lrc 外挂歌词（utf-8 or utf-16）
 Future<String?> getLyricFromPath({required String path}) =>
     RustLib.instance.api.crateApiTagReaderGetLyricFromPath(path: path);
+
+/// for Flutter
+/// 将标题、艺术家、专辑写入音乐文件的元数据标签
+/// 支持 ID3v2 (MP3)、VorbisComments (FLAC/OGG)、MP4Ilst (M4A) 等格式
+Future<bool> writeTagToFile(
+        {required String path,
+        required String title,
+        required String artist,
+        required String album}) =>
+    RustLib.instance.api.crateApiTagReaderWriteTagToFile(
+        path: path, title: title, artist: artist, album: album);
+
+/// for Flutter
+/// 将封面图片数据写入音乐文件的元数据标签
+/// cover_data 为图片的原始字节（JPEG/PNG）
+Future<bool> writeCoverToFile(
+        {required String path, required List<int> coverData}) =>
+    RustLib.instance.api
+        .crateApiTagReaderWriteCoverToFile(path: path, coverData: coverData);
 
 /// for Flutter
 /// 扫描给定路径下所有子文件夹（包括自己）的音乐文件并把索引保存在 index_path/index.json。

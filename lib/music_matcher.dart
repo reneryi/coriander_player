@@ -138,48 +138,70 @@ class SongSearchResult {
   }
 }
 
+/// 统一搜索：分别从酷狗、网易云、QQ音乐搜索，每个 API 独立 try-catch，
+/// 避免某个 API 失败导致全部搜索结果为空。
 Future<List<SongSearchResult>> uniSearch(Audio audio) async {
   final query = audio.title;
+  List<SongSearchResult> result = [];
+
+  // 酷狗搜索
   try {
-    List<SongSearchResult> result = [];
-
     final Map kugouAnswer = (await KuGou.searchSong(keyword: query)).data;
-    final List kugouResultList = kugouAnswer["data"]["info"];
-    for (int j = 0; j < kugouResultList.length; j++) {
-      if (j >= 5) break;
-      result.add(SongSearchResult.fromKugouSearchResult(
-        kugouResultList[j],
-        audio,
-      ));
+    final kugouData = kugouAnswer["data"];
+    final List? kugouResultList = kugouData?["info"];
+    if (kugouResultList != null) {
+      for (int j = 0; j < kugouResultList.length; j++) {
+        if (j >= 5) break;
+        result.add(SongSearchResult.fromKugouSearchResult(
+          kugouResultList[j],
+          audio,
+        ));
+      }
     }
-
-    final Map neteaseAnswer = (await Netease.search(keyWord: query)).data;
-    final List neteaseResultList = neteaseAnswer["result"]["songs"];
-    for (int k = 0; k < neteaseResultList.length; k++) {
-      if (k >= 5) break;
-      result.add(SongSearchResult.fromNeteaseSearchResult(
-        neteaseResultList[k],
-        audio,
-      ));
-    }
-
-    final Map qqAnswer = (await QQ.search(keyWord: query)).data;
-    final List qqResultList = qqAnswer["req"]["data"]["body"]["item_song"];
-    for (int i = 0; i < qqResultList.length; i++) {
-      if (i >= 5) break;
-      result.add(SongSearchResult.fromQQSearchResult(
-        qqResultList[i],
-        audio,
-      ));
-    }
-
-    result.sort((a, b) => b.score.compareTo(a.score));
-    return result;
   } catch (err, trace) {
-    LOGGER.e("query: $query");
-    LOGGER.e(err, stackTrace: trace);
+    LOGGER.e("酷狗搜索失败 query: $query", error: err, stackTrace: trace);
   }
-  return Future.value([]);
+
+  // 网易云搜索
+  try {
+    final Map neteaseAnswer = (await Netease.search(keyWord: query)).data;
+    final neteaseResult = neteaseAnswer["result"];
+    final List? neteaseResultList = neteaseResult?["songs"];
+    if (neteaseResultList != null) {
+      for (int k = 0; k < neteaseResultList.length; k++) {
+        if (k >= 5) break;
+        result.add(SongSearchResult.fromNeteaseSearchResult(
+          neteaseResultList[k],
+          audio,
+        ));
+      }
+    }
+  } catch (err, trace) {
+    LOGGER.e("网易云搜索失败 query: $query", error: err, stackTrace: trace);
+  }
+
+  // QQ音乐搜索
+  try {
+    final Map qqAnswer = (await QQ.search(keyWord: query)).data;
+    final qqReq = qqAnswer["req"];
+    final qqData = qqReq?["data"];
+    final qqBody = qqData?["body"];
+    final List? qqResultList = qqBody?["item_song"];
+    if (qqResultList != null) {
+      for (int i = 0; i < qqResultList.length; i++) {
+        if (i >= 5) break;
+        result.add(SongSearchResult.fromQQSearchResult(
+          qqResultList[i],
+          audio,
+        ));
+      }
+    }
+  } catch (err, trace) {
+    LOGGER.e("QQ音乐搜索失败 query: $query", error: err, stackTrace: trace);
+  }
+
+  result.sort((a, b) => b.score.compareTo(a.score));
+  return result;
 }
 
 Future<Lrc?> _getNeteaseUnsyncLyric(String neteaseSongId) async {

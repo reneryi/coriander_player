@@ -8,6 +8,7 @@ import 'package:coriander_player/play_service/playback_service.dart';
 import 'package:coriander_player/play_service/play_service.dart';
 import 'package:coriander_player/src/bass/bass_player.dart';
 import 'package:coriander_player/utils.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +41,18 @@ class HotkeysHelper {
     HotkeyAction.mute,
     HotkeyAction.toggleMainWindow,
   };
+
+  /// 鼠标侧键的 USB HID 用途 ID
+  static final int _browserBackKeyId =
+      PhysicalKeyboardKey.browserBack.usbHidUsage;
+  static final int _browserForwardKeyId =
+      PhysicalKeyboardKey.browserForward.usbHidUsage;
+
+  /// 判断绑定是否为鼠标侧键（无法通过系统级热键 API 注册）
+  static bool isMouseButtonBinding(HotkeyBindingPreference binding) {
+    return binding.keyId == _browserBackKeyId ||
+        binding.keyId == _browserForwardKeyId;
+  }
 
   static final _windowListener = _HotkeyWindowListener();
 
@@ -125,7 +138,19 @@ class HotkeysHelper {
   static HotkeyBindingPreference getDefaultBinding(HotkeyAction action) =>
       HotkeyPreference.defaults().bindings[action.prefKey]!;
 
+  /// 鼠标侧键 USB HID ID → 友好显示名称映射
+  static final Map<int, String> _mouseButtonLabels = {
+    PhysicalKeyboardKey.browserBack.usbHidUsage: "鼠标侧键后退",
+    PhysicalKeyboardKey.browserForward.usbHidUsage: "鼠标侧键前进",
+  };
+
   static String describeBinding(HotkeyBindingPreference binding) {
+    // 优先检查是否为鼠标侧键
+    final mouseLabel = _mouseButtonLabels[binding.keyId];
+    if (mouseLabel != null && binding.modifiers.isEmpty) {
+      return mouseLabel;
+    }
+
     final key = PhysicalKeyboardKey.findKeyByCode(binding.keyId);
     if (key == null) return "未设置";
     final buffer = <String>[];
@@ -145,7 +170,8 @@ class HotkeysHelper {
           break;
       }
     }
-    final label = key.debugName ?? key.keyLabel;
+    // 鼠标侧键带修饰符的情况也用友好名称
+    final label = mouseLabel ?? key.debugName ?? key.keyLabel;
     buffer.add(
         (label == " ") ? "Space" : (label.isEmpty ? key.toString() : label));
     return buffer.join("+");
@@ -190,6 +216,8 @@ class HotkeysHelper {
     for (final action in HotkeyAction.values) {
       if (!registerActions.contains(action)) continue;
       final binding = getBinding(action);
+      // 鼠标侧键无法通过系统级热键 API 注册，跳过
+      if (isMouseButtonBinding(binding)) continue;
       final hotkey = _toHotKey(binding);
       if (hotkey == null) continue;
       try {
@@ -290,6 +318,35 @@ class HotkeysHelper {
   static Future<void> onWindowFocusChanged(bool focused) async {
     _windowFocused = focused;
     await _applyCurrentMode();
+  }
+
+  /// 处理鼠标侧键事件（从 Listener widget 调用）
+  static void handlePointerDown(PointerDownEvent event) {
+    // 鼠标侧键后退 = button 3, 前进 = button 4
+    final int button = event.buttons;
+    int? matchKeyId;
+    if (button == kBackMouseButton) {
+      matchKeyId = _browserBackKeyId;
+    } else if (button == kForwardMouseButton) {
+      matchKeyId = _browserForwardKeyId;
+    }
+    if (matchKeyId == null) return;
+
+    // 遍历所有绑定，找到匹配的 action 并执行
+    for (final action in HotkeyAction.values) {
+      final binding = getBinding(action);
+      if (binding.keyId == matchKeyId && binding.modifiers.isEmpty) {
+        final handler = _handlers[action];
+        if (handler != null) {
+          handler(HotKey(
+            key: PhysicalKeyboardKey.findKeyByCode(matchKeyId) ??
+                PhysicalKeyboardKey.browserBack,
+            scope: HotKeyScope.system,
+          ));
+        }
+        return;
+      }
+    }
   }
 
   static Future<void> onFocusChanges(bool focus) async {

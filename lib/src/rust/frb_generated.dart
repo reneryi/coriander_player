@@ -73,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1148029228;
+  int get rustContentHash => 1800697586;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -128,6 +128,15 @@ abstract class RustLibApi extends BaseApi {
 
   Stream<IndexActionState> crateApiTagReaderUpdateIndex(
       {required String indexPath});
+
+  Future<bool> crateApiTagReaderWriteCoverToFile(
+      {required String path, required List<int> coverData});
+
+  Future<bool> crateApiTagReaderWriteTagToFile(
+      {required String path,
+      required String title,
+      required String artist,
+      required String album});
 
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_SmtcFlutter;
@@ -585,6 +594,65 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["indexPath", "sink"],
       );
 
+  @override
+  Future<bool> crateApiTagReaderWriteCoverToFile(
+      {required String path, required List<int> coverData}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(path, serializer);
+        sse_encode_list_prim_u_8_loose(coverData, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 17, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiTagReaderWriteCoverToFileConstMeta,
+      argValues: [path, coverData],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiTagReaderWriteCoverToFileConstMeta =>
+      const TaskConstMeta(
+        debugName: "write_cover_to_file",
+        argNames: ["path", "coverData"],
+      );
+
+  @override
+  Future<bool> crateApiTagReaderWriteTagToFile(
+      {required String path,
+      required String title,
+      required String artist,
+      required String album}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(path, serializer);
+        sse_encode_String(title, serializer);
+        sse_encode_String(artist, serializer);
+        sse_encode_String(album, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 18, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiTagReaderWriteTagToFileConstMeta,
+      argValues: [path, title, artist, album],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiTagReaderWriteTagToFileConstMeta =>
+      const TaskConstMeta(
+        debugName: "write_tag_to_file",
+        argNames: ["path", "title", "artist", "album"],
+      );
+
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_SmtcFlutter => wire
           .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSMTCFlutter;
@@ -701,6 +769,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<InstalledFont> dco_decode_list_installed_font(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_installed_font).toList();
+  }
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
   }
 
   @protected
@@ -909,6 +983,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ans_.add(sse_decode_installed_font(deserializer));
     }
     return ans_;
+  }
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
   }
 
   @protected
@@ -1138,6 +1219,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     for (final item in self) {
       sse_encode_installed_font(item, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(
+      List<int> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer
+        .putUint8List(self is Uint8List ? self : Uint8List.fromList(self));
   }
 
   @protected

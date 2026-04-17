@@ -7,6 +7,7 @@ import 'package:coriander_player/component/mini_now_playing.dart';
 import 'package:coriander_player/component/responsive_builder.dart';
 import 'package:coriander_player/component/side_nav.dart';
 import 'package:coriander_player/component/title_bar.dart';
+import 'package:coriander_player/hotkeys_helper.dart';
 import 'package:flutter/material.dart';
 
 class AppShell extends StatelessWidget {
@@ -16,16 +17,20 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveBuilder(
-      builder: (context, screenType) {
-        switch (screenType) {
-          case ScreenType.small:
-            return _AppShell_Small(page: page);
-          case ScreenType.medium:
-          case ScreenType.large:
-            return _AppShell_Large(page: page);
-        }
-      },
+    // 外层 Listener 捕获鼠标侧键事件，分发给快捷键系统处理
+    return Listener(
+      onPointerDown: HotkeysHelper.handlePointerDown,
+      child: ResponsiveBuilder(
+        builder: (context, screenType) {
+          switch (screenType) {
+            case ScreenType.small:
+              return _AppShell_Small(page: page);
+            case ScreenType.medium:
+            case ScreenType.large:
+              return _AppShell_Large(page: page);
+          }
+        },
+      ),
     );
   }
 }
