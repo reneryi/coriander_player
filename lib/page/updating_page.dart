@@ -1,21 +1,21 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/online_cover_store.dart';
-import 'package:coriander_player/library/play_count_store.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/lyric/lyric_source.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/src/rust/api/tag_reader.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/online_cover_store.dart';
+import 'package:qisheng_player/library/play_count_store.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/lyric/lyric_source.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/src/rust/api/tag_reader.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:coriander_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/app_paths.dart' as app_paths;
 
 class UpdatingPage extends StatelessWidget {
   const UpdatingPage({super.key});
@@ -47,7 +47,7 @@ class UpdatingPage extends StatelessWidget {
                 builder: (context, snapshot) {
                   if (snapshot.data == null) {
                     return const Center(
-                      child: Text("Fail to get app data dir."),
+                      child: Text("无法获取应用数据目录。"),
                     );
                   }
 

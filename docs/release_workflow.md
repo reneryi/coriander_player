@@ -1,57 +1,53 @@
 # Windows 发布流程
 
-本文档说明当前项目的 Windows 打包目录约定，重点区分 `build/` 与 `dist/windows/`。
+本文档说明 `qisheng_player` 的 Windows 发布约定。当前正式版本为 `1.0.0`，发布名使用 `Qisheng Player v1.0`。
 
 ## 目录分工
 
-- `build/`
-  - Flutter、CMake、Rust 的自动构建输出。
-  - 主要用于编译，不用于长期保存交付物。
-- `dist/windows/package/`
-  - 打包脚本整合后的完整发布目录。
-  - 可用于人工检查交付结果是否完整。
-- `dist/windows/artifacts/packages/`
-  - 最终产物目录。
-  - 保存 `.zip` 和安装程序 `.exe`。
-- `dist/windows/installer_work/`
-  - Inno Setup 的工作目录与临时脚本。
-- `docs/releases/`
-  - 版本发布说明、发布 payload、历史说明归档。
+- `build/`：Flutter、CMake 和 Rust 的自动构建输出，只用于编译。
+- `dist/windows/package/`：发布脚本整合后的完整可运行目录，可用于人工检查。
+- `dist/windows/artifacts/packages/`：最终发布产物目录，保存 zip 和安装器。
+- `dist/windows/installer_work/`：Inno Setup 中间工作目录。
+- `docs/releases/`：版本说明和 GitHub Release payload。
 
-## 推荐流程
-
-### 1. 日常开发
-
-- 直接从主函数启动程序进行调试。
-- 不再依赖整合目录做日常验证。
-
-### 2. 构建主程序
+## 发布前检查
 
 ```powershell
 flutter pub get
+dart format lib test tools\test
 flutter analyze
+flutter test
 
 Set-Location rust
 cargo check
 Set-Location ..
+```
 
-flutter test tools/test/sort_smoke_test.dart
+## 构建主程序
+
+```powershell
 flutter build windows --release
 ```
 
-### 3. 构建桌面歌词子程序
+主程序输出应包含：
+
+- `build/windows/x64/runner/Release/qisheng_player.exe`
+- Flutter 运行时 DLL
+- `data/` 资源目录
+
+## 构建桌面歌词
 
 ```powershell
-Set-Location third_party/desktop_lyric
+Set-Location third_party\desktop_lyric
 flutter pub get
 flutter analyze --no-fatal-infos
 flutter build windows --release
 Set-Location ..\..
 ```
 
-### 4. 准备 BASS 运行时依赖
+## 准备 BASS 依赖
 
-将所需 DLL 放入仓库根目录的 `BASS/`：
+仓库根目录的 `BASS/` 需要包含运行时 DLL：
 
 - `bass.dll`
 - `bassape.dll`
@@ -63,20 +59,24 @@ Set-Location ..\..
 - `basswasapi.dll`
 - `bass_aac.dll`
 
-## 生成发布产物
+这些文件用于本地构建和发布整合，但不提交到 Git。
+
+## 生成发布包
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1
+powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1 -Version 1.0.0
 ```
 
-运行完成后，重点查看：
+输出文件：
 
-- `dist/windows/package/`
-- `dist/windows/artifacts/packages/`
+- `dist/windows/artifacts/packages/Qisheng-Player-v1.0.0-Windows-x64.zip`
+- `dist/windows/artifacts/packages/Qisheng-Player-v1.0.0-Setup-x64.exe`
 
-## 当前约定
+安装器需要本机安装 Inno Setup 6。如果环境未安装 Inno Setup，zip 包仍可作为便携版交付，安装器需要在具备 `ISCC.exe` 的机器上重新生成。
 
-- `dist/windows/package/` 用于“看整合结果”。
-- `dist/windows/artifacts/packages/` 用于“拿最终交付包”。
-- `docs/releases/` 用于“保存版本说明和发布配置”。
-- `build/` 只保留自动构建产物，不再承担发布归档职责。
+## GitHub 发布建议
+
+- Tag：`v1.0.0`
+- Release 标题：`Qisheng Player v1.0`
+- Release 说明来源：`docs/releases/v1.0.0.md`
+- 附件：zip 便携包和 setup 安装器。

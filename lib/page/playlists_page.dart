@@ -1,10 +1,10 @@
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/hotkeys_helper.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/app_paths.dart' as app_paths;
+﻿import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/hotkeys_helper.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/app_paths.dart' as app_paths;
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -77,7 +77,7 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
       ));
     });
     scheduleSavePlaylists();
-    showTextOnSnackBar("已导入歌单“$finalName”，共${matchedAudios.length}首");
+    showTextOnSnackBar("已导入歌单“$finalName”，共 ${matchedAudios.length} 首");
   }
 
   void newPlaylist(BuildContext context) async {
@@ -123,7 +123,7 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
           maxLines: 1,
         ),
         subtitle: Text(
-          "${PLAYLISTS[i].audios.length}首乐曲",
+          "${PLAYLISTS[i].audios.length}首乐曀",
           softWrap: false,
           maxLines: 1,
         ),
@@ -190,7 +190,7 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.name.localeCompareTo(b.name));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.name.localeCompareTo(a.name));
                 break;
             }
@@ -204,7 +204,7 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.audios.length.compareTo(b.audios.length));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.audios.length.compareTo(a.audios.length));
                 break;
             }
@@ -327,7 +327,7 @@ class _EditPlaylistDialog extends StatelessWidget {
                     Navigator.pop(context, value);
                   },
                   decoration: const InputDecoration(
-                    labelText: "新歌单名称",
+                    labelText: "新歌单名秀",
                     border: OutlineInputBorder(),
                   ),
                 ),

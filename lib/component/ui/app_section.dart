@@ -1,4 +1,4 @@
-import 'package:coriander_player/component/ui/app_surface.dart';
+﻿import 'package:qisheng_player/component/ui/app_surface.dart';
 import 'package:flutter/material.dart';
 
 class AppSection extends StatelessWidget {

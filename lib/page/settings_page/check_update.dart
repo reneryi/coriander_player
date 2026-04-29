@@ -1,6 +1,6 @@
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/src/rust/api/utils.dart';
-import 'package:coriander_player/utils.dart';
+﻿import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/src/rust/api/utils.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:github/github.dart';
@@ -74,7 +74,7 @@ class _CheckForUpdateState extends State<CheckForUpdate> {
       ),
       const Padding(
         padding: EdgeInsets.symmetric(horizontal: 8.0),
-        child: Text("当前版本：${AppSettings.version}"),
+        child: Text("当前版本 ${AppSettings.version}"),
       ),
       if (isChecking)
         const Padding(

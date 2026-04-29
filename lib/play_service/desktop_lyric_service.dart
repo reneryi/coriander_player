@@ -1,21 +1,22 @@
-// ignore_for_file: annotate_overrides
+﻿// ignore_for_file: annotate_overrides
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
-import 'package:coriander_player/src/bass/bass_player.dart';
-import 'package:coriander_player/src/rust/api/installed_font.dart';
-import 'package:coriander_player/theme_provider.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/window_controls.dart';
+import 'package:qisheng_player/app_brand.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/src/bass/bass_player.dart';
+import 'package:qisheng_player/src/rust/api/installed_font.dart';
+import 'package:qisheng_player/theme_provider.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/window_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 
@@ -111,10 +112,18 @@ class DesktopLyricService extends DesktopLyricController {
       if (programFiles != null)
         path.join(
           programFiles,
+          AppBrand.englishName,
+          "desktop_lyric",
+          "desktop_lyric.exe",
+        ),
+      if (programFiles != null)
+        path.join(
+          programFiles,
           "Coriander Player",
           "desktop_lyric",
           "desktop_lyric.exe",
         ),
+      r"E:\Qisheng Player\desktop_lyric\desktop_lyric.exe",
       r"E:\Coriander Player\desktop_lyric\desktop_lyric.exe",
     ];
 
@@ -431,9 +440,9 @@ class DesktopLyricService extends DesktopLyricController {
             [
               json.encode(msg.InitArgsMessage(
                 _playbackService.playerState == PlayerState.playing,
-                nowPlaying?.title ?? "无",
-                nowPlaying?.artist ?? "无",
-                nowPlaying?.album ?? "无",
+                nowPlaying?.title ?? "旀",
+                nowPlaying?.artist ?? "旀",
+                nowPlaying?.album ?? "旀",
                 isDarkMode,
                 initialPrimary,
                 initialSurfaceContainer,

@@ -1,240 +1,121 @@
-# Coriander Player（Fork 版）
+# 栖声 Qisheng Player
 
 [![Windows CI](https://github.com/reneryi/coriander_player/actions/workflows/windows_ci.yml/badge.svg)](https://github.com/reneryi/coriander_player/actions/workflows/windows_ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-![音乐页](docs/screenshots/音乐页.png)
+栖声是面向 Windows 10/11 的本地音乐播放器，基于 Flutter、Rust 与 BASS 构建。项目源自 [Ferry-200/coriander_player](https://github.com/Ferry-200/coriander_player)，当前分支已整合为 `qisheng_player v1.0.0`，重点优化本地曲库、歌词、播放队列、桌面歌词和沉浸式播放器界面。
 
-> 基于 [Ferry-200/coriander_player](https://github.com/Ferry-200/coriander_player) 的维护分支，专注于 **稳定性修复** 与 **功能增强**。
+## 主要功能
 
-## ✨ Fork 版改动亮点
+- 本地曲库：支持多文件夹扫描、索引缓存、A-Z/拼音索引、搜索、排序、视图切换和当前播放定位。
+- 播放体验：支持播放队列、随机/顺序/单曲循环、拖拽重排、播放次数统计、ReplayGain 音量均衡和 CUE 分轨。
+- 歌词系统：支持本地歌词、在线歌词匹配、逐字歌词、翻译显示开关、桌面歌词和音乐页右侧歌词预览。
+- 资料管理：支持艺术家、专辑、文件夹、歌单与详细信息页面，右键菜单可编辑标签、封面和歌词。
+- 视觉与交互：统一玻璃拟态界面、动态专辑取色、可折叠侧栏、页面淡入淡出切换、沉浸式/专业式 Now Playing 页面。
+- 系统集成：支持自定义快捷键、鼠标侧键、系统托盘、任务栏缩略图控制、窗口拖拽/缩放和 Windows 背景材质回退。
 
-### 🛠 稳定性修复（阶段一）
-- 修复播放过程中控件显示暂停/播放状态不一致的问题
-- 修复桌面歌词开启后不立即显示当前歌词的问题
-- 修复多文件夹扫描导致歌曲重复显示的问题
-- 修复搜索功能对歌手和专辑关联性不足的问题
-- 修复独占模式偶发不生效的问题
-- 修复歌曲标签乱码与内置字体不显示常用字的问题
-- 修复歌单持久化丢失（重启后歌单为空）的问题
-- 修复最大化后关闭再打开不保持最大化状态的问题
-
-### 🚀 功能扩展（阶段二）
-- **窗口与托盘**：关闭窗口最小化到托盘，托盘菜单支持播放控制
-- **任务栏控件**：鼠标悬停任务栏时显示上/下一首、播放/暂停缩略图按钮
-- **播放列表**：支持拖拽重排与自定义播放顺序
-- **歌曲播放次数**：记录并展示播放次数，支持按播放次数排序
-- **专辑碟号识别**：多碟专辑按碟号 + 音轨号排列
-- **歌词翻译开关**：可在播放页/桌面歌词中控制是否显示翻译
-- **首字母快速定位**：音乐详情页右侧 A-Z 索引，支持中文拼音首字母
-- **音乐定位按钮**：播放界面一键定位到当前播放歌曲在列表中位置
-- **当前播放高亮**：音乐详情页内高亮显示正在播放的歌曲
-- **播放页添加到歌单**：支持创建新歌单并添加当前歌曲
-- **长歌名滚动**：歌曲名过长时自动滚动显示
-- **音量均衡**：基于 ReplayGain 的自动音量补偿
-- **CUE 文件支持**：解析 CUE 分轨、封面、歌词裁剪
-- **桌面歌词增强**：字体选择、RGB 颜色、位置/颜色/锁定等设置记忆
-- **多选增强**：Shift 范围选择，批量添加到歌单、批量删除
-- **快捷键系统**：可自定义快捷键，支持鼠标侧键，后台可用范围控制
-- **背景自定义**：支持自定义播放器背景图片
-- **控件自动隐藏**：播放页无操作 5 秒后自动隐藏进度条和按钮
-- **在线封面获取**：自动为无封面的歌曲在线获取封面
-- **音乐标签编辑**：右键菜单在线搜索后编辑内嵌封面、歌词、Tag
-- **WAV 元数据**：完善 WAV 格式的元数据读取
-- **DTS 格式支持**：新增对 DTS 音频格式的播放支持
-- **m3u 导入**：导入播放列表文件，自动生成对应歌单
-- **多选入口优化**：多选功能从右上角直接进入，无需右键菜单
-- **文件夹管理**：设置中的文件夹管理移至专属页面，支持扫描音乐库
-
-### 🎨 体验重塑（阶段三）
-- **设计系统重构**：新增统一主题 token、拟态表面容器和组件子主题，亮暗模式视觉更一致
-- **大屏壳层更新**：主界面改为浮层侧边栏 + 页面面板 + 浮动迷你播放器的现代桌面布局
-- **可折叠侧边栏**：设置下方新增展开/收起按钮，大屏导航栏宽度可丝滑过渡
-- **音乐页内联搜索**：搜索入口移动到页头，点击展开后实时过滤当前歌曲列表
-- **播放页双模式**：Now Playing 新增 `沉浸` / `专业` 两套布局，可在设置页和播放页内切换
-- **动态取色收敛**：歌曲封面动态主题只影响强调色，不再打乱整体表面层级与深蓝黑夜间基调
-
-完整改动日志请见 [docs/changelog.md](docs/changelog.md)。
-
-## 📥 下载安装
-
-### 直接下载
-前往 [Releases](https://github.com/reneryi/coriander_player/releases) 下载最新版本。
-
-### MSIX 安装
-如使用 MSIX 包安装，请参阅 [MSIX 安装指南](docs/msix_install.md)。
-
-## 🎵 支持的音频格式
+## 支持格式
 
 | 格式 | 播放 | 内嵌歌词 |
-|------|:----:|:--------:|
-| MP3 / MP2 / MP1 | ✅ | ✅ |
-| FLAC | ✅ | ✅ |
-| WAV / WAVE | ✅ | ✅* |
-| OGG | ✅ | ✅ |
-| AAC / ADTS | ✅ | ✅ |
-| M4A | ✅ | ✅ |
-| AIFF / AIF / AIFC | ✅ | ✅ |
-| OPUS | ✅ | ✅ |
-| APE | ✅ | — |
-| WV / WVC | ✅ | — |
-| DSD (DSF / DFF) | ✅ | — |
-| AC3 | ✅ | — |
-| ASF / WMA | ✅ | — |
-| MPC | ✅ | — |
-| MIDI | ✅ | — |
-| AMR / 3GA | ✅ | — |
-| DTS | ✅ | — |
+| --- | :---: | :---: |
+| MP3 / MP2 / MP1 | 支持 | 支持 |
+| FLAC | 支持 | 支持 |
+| WAV / WAVE | 支持 | 支持 |
+| OGG | 支持 | 支持 |
+| AAC / ADTS / M4A | 支持 | 支持 |
+| AIFF / AIF / AIFC | 支持 | 支持 |
+| OPUS | 支持 | 支持 |
+| APE / WV / WVC | 支持 | 视标签而定 |
+| DSD / AC3 / WMA / MPC / MIDI / AMR / 3GA / DTS | 支持 | 视标签而定 |
 
-> \* WAV 内嵌歌词需标签使用 UTF-8 编码。  
-> 其他格式支持同目录 LRC 文件（UTF-8 / UTF-16 编码）或在线歌词匹配。
+同目录 LRC 文件、UTF-8/UTF-16 歌词文件与在线歌词匹配可作为补充歌词源。
 
-## ⌨️ 默认快捷键
+## 默认快捷键
 
 | 功能 | 快捷键 |
-|------|--------|
-| 播放 / 暂停 | `空格` |
-| 上一首 | `←` |
-| 下一首 | `→` |
-| 音量增 | `↑` |
-| 音量减 | `↓` |
+| --- | --- |
+| 播放 / 暂停 | `Space` |
+| 上一首 / 下一首 | `Left` / `Right` |
+| 音量加 / 音量减 | `Up` / `Down` |
 | 静音 | `Alt + M` |
-| 显示/隐藏桌面歌词 | `Ctrl + M` |
-| 显示/隐藏主界面 | `Ctrl + H` |
+| 显示 / 隐藏桌面歌词 | `Ctrl + M` |
+| 显示 / 隐藏主界面 | `Ctrl + H` |
 | 返回上一页 | `Esc` |
 | 退出程序 | `Ctrl + Q` |
 
-> 所有快捷键均可在设置中自定义，支持鼠标侧键。  
-> 后台（窗口失焦）时仅部分快捷键可用：上/下一首、音量加/减、静音、显示/隐藏主界面。
+所有快捷键都可以在设置中自定义，部分动作支持后台全局触发。
 
-## 🔧 开发环境
+## 项目结构
 
-| 工具 | 版本 |
-|------|------|
-| Flutter | 3.41.6 (stable) |
-| Dart SDK | >=3.1.4 <4.0.0 |
-| Rust | stable |
-| 目标平台 | Windows 10/11 x64 |
-
-## 📁 项目结构
-
-```
-coriander_player/
-├── lib/                        Flutter 主程序源码
-├── rust/                       Rust 源码
-├── windows/                    Windows 原生层
-├── third_party/
-│   └── desktop_lyric/          桌面歌词子项目
-├── test/                       项目测试
-├── tools/
-│   ├── release/                打包脚本
-│   └── test/                   工具类测试脚本
-├── docs/
-│   ├── changelog.md
-│   ├── msix_install.md
-│   ├── project_structure.md
-│   ├── release_workflow.md
-│   ├── releases/               版本发布说明与 payload
-│   └── screenshots/            README 截图
-├── dist/
-│   └── windows/
-│       ├── package/            整合后的完整发布目录
-│       ├── artifacts/
-│       │   └── packages/       最终 zip / setup.exe
-│       └── installer_work/     Inno Setup 工作目录
-├── BASS/                       本地运行依赖 DLL（不提交）
-├── build/                      Flutter/Rust 自动构建输出
-├── notes/                      本地协作笔记（不提交）
-├── README.md
-├── CONTRIBUTING.md
-└── pubspec.yaml
-
+```text
+qisheng_player/
+├─ lib/                         Flutter 主程序、页面、组件、主题和服务
+│  ├─ component/                 通用组件与播放器 UI
+│  ├─ library/                   曲库、歌单、封面、播放次数和元数据
+│  ├─ page/                      音乐、艺术家、专辑、文件夹、歌单、设置等页面
+│  ├─ play_service/              播放、歌词与桌面歌词服务
+│  └─ src/bass/                  BASS 播放桥接
+├─ rust/                         Rust 元数据读取与原生能力
+├─ rust_builder/                 flutter_rust_bridge 生成/桥接包
+├─ windows/                      Windows Runner、资源和窗口集成
+├─ third_party/desktop_lyric/    桌面歌词子程序
+├─ test/                         Widget、服务和回归测试
+├─ tools/release/                Windows 发布打包脚本
+├─ tools/test/                   工具类测试
+├─ docs/                         更新日志、结构说明和发布流程
+├─ assets/                       栖声品牌图标资源
+└─ BASS/                         本地运行依赖 DLL，不提交到 Git
 ```
 
-## 🏗️ 本地构建（Windows）
+更详细的目录说明见 [docs/project_structure.md](docs/project_structure.md)。
 
-```bash
-# 1. 获取依赖
+## 本地开发
+
+```powershell
 flutter pub get
-
-# 2. 代码质量检查
 flutter analyze
-cd rust && cargo check && cd ..
-flutter test tools/test/sort_smoke_test.dart
+flutter test
 
-# 3. 构建主程序
+Set-Location rust
+cargo check
+Set-Location ..
+
+flutter build windows --debug
+```
+
+## Windows 发布
+
+先构建主程序和桌面歌词：
+
+```powershell
 flutter build windows --release
 
-# 4. 构建桌面歌词
-cd third_party/desktop_lyric
+Set-Location third_party\desktop_lyric
 flutter pub get
-flutter analyze --no-fatal-infos
 flutter build windows --release
-cd ../..
+Set-Location ..\..
 ```
 
-### BASS 运行时依赖
+再生成发布包：
 
-将以下 64 位 DLL 放入发布目录的 `BASS/` 文件夹中：
-
-`bass.dll` · `bassape.dll` · `bassdsd.dll` · `bassflac.dll` · `bassmidi.dll` · `bassopus.dll` · `basswv.dll` · `basswasapi.dll` · `bass_aac.dll`
-
-### 打包安装程序与压缩包
-
-```bash
-# 在完成 release 构建后执行
-powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1 -Version 1.0.0
 ```
 
-产物输出目录：`dist/windows/artifacts`
+发布产物输出到 `dist/windows/artifacts/packages/`：
 
-- `Coriander-Player-v<version>-Windows-x64.zip`：便携压缩包
-- `Coriander-Player-v<version>-Setup-x64.exe`：安装程序（安装到 `%LOCALAPPDATA%\Coriander Player`）
+- `Qisheng-Player-v1.0.0-Windows-x64.zip`
+- `Qisheng-Player-v1.0.0-Setup-x64.exe`
 
-## 🔄 CI / CD
+生成安装器需要本机安装 Inno Setup 6。完整流程见 [docs/release_workflow.md](docs/release_workflow.md)。
 
-GitHub Actions 工作流 ([`.github/workflows/windows_ci.yml`](.github/workflows/windows_ci.yml)) 覆盖：
+## 文档
 
-- **主工程**：`flutter pub get` → `flutter analyze` → `cargo check` → `flutter test` → `flutter build windows --release`
-- **桌面歌词**：`flutter pub get` → `flutter analyze --no-fatal-infos` → `flutter build windows --release`
-- **BASS 依赖**：自动下载并归档（含 `bass_aac.dll`）
+- [更新日志](docs/changelog.md)
+- [项目结构](docs/project_structure.md)
+- [Windows 发布流程](docs/release_workflow.md)
+- [贡献指南](CONTRIBUTING.md)
 
-## 🤝 贡献
+## License
 
-欢迎提交 Issue 和 PR！详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-## 📸 软件截图
-
-<details>
-<summary>展开查看更多截图</summary>
-
-![音乐页](docs/screenshots/音乐页.png)
-![艺术家页](docs/screenshots/艺术家页.png)
-![艺术家详情页](docs/screenshots/艺术家详情页.png)
-![专辑详情页](docs/screenshots/专辑详情页.png)
-![主题选择器](docs/screenshots/主题选择器.png)
-![夜间模式](docs/screenshots/夜间模式.png)
-![正在播放：LRC歌词](docs/screenshots/正在播放（LRC歌词）.png)
-![正在播放：逐字歌词](docs/screenshots/正在播放（逐字歌词）.png)
-![正在播放：间奏动画](docs/screenshots/正在播放（间奏动画）.png)
-![正在播放：居中对齐](docs/screenshots/正在播放（居中对齐）.png)
-![桌面歌词](docs/screenshots/桌面歌词.png)
-![桌面歌词：操作栏](docs/screenshots/桌面歌词（操作栏）.png)
-![桌面歌词：个性化设置](docs/screenshots/桌面歌词（个性化设置）.png)
-![桌面歌词：夜间模式](docs/screenshots/桌面歌词（夜间模式）.png)
-
-</details>
-
-## 🙏 致谢
-
-- [Ferry-200/coriander_player](https://github.com/Ferry-200/coriander_player) — 原始项目
-- [desktop_lyric](https://github.com/Ferry-200/desktop_lyric) — 桌面歌词组件原始仓库
-- [music_api](https://github.com/yhsj0919/music_api.git) — 歌曲匹配与歌词获取
-- [Lofty](https://crates.io/crates/lofty) — 歌曲标签读取
-- [BASS](https://www.un4seen.com/bass.html) — 音频播放引擎
-- [flutter_rust_bridge](https://pub.dev/packages/flutter_rust_bridge) — Flutter 与 Rust 桥接
-- [Silicon7921](https://github.com/Silicon7921) — 应用图标设计
-
-## 📄 许可证
-
-本项目基于 [GPL-3.0](LICENSE) 协议开源。
+本项目基于 GPL-3.0 许可证发布。请同时遵守 BASS 与相关第三方依赖的授权要求。

@@ -1,31 +1,39 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/page/now_playing_page/component/lyric_view_controls.dart';
-import 'package:coriander_player/page/now_playing_page/page.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_view_controls.dart';
+import 'package:qisheng_player/page/now_playing_page/page.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/services.dart';
 
 class PagePreference {
   int sortMethod;
   SortOrder sortOrder;
   ContentView contentView;
+  bool showLyricPreview;
 
-  PagePreference(this.sortMethod, this.sortOrder, this.contentView);
+  PagePreference(
+    this.sortMethod,
+    this.sortOrder,
+    this.contentView, {
+    this.showLyricPreview = false,
+  });
 
   Map toMap() => {
         "sortMethod": sortMethod,
         "sortOrder": sortOrder.name,
         "contentView": contentView.name,
+        "showLyricPreview": showLyricPreview,
       };
 
   factory PagePreference.fromMap(Map map) => PagePreference(
         map["sortMethod"] ?? 0,
         SortOrder.fromString(map["sortOrder"]) ?? SortOrder.ascending,
         ContentView.fromString(map["contentView"]) ?? ContentView.list,
+        showLyricPreview: map["showLyricPreview"] ?? false,
       );
 }
 
@@ -34,7 +42,10 @@ enum NowPlayingStyleMode {
   studio;
 
   static NowPlayingStyleMode? fromString(String? value) {
-    return NowPlayingStyleMode.immersive;
+    for (final mode in NowPlayingStyleMode.values) {
+      if (mode.name == value) return mode;
+    }
+    return null;
   }
 }
 
@@ -126,13 +137,13 @@ class PlaybackPreference {
 }
 
 class DesktopLyricPreference {
-  /// 退出前桌面歌词是否处于开启状态
+  /// 閫€鍑哄墠妗岄潰姝岃瘝鏄惁澶勪簬寮€鍚姸鎬?
   bool enabled;
 
-  /// 退出前桌面歌词是否锁定
+  /// 閫€鍑哄墠妗岄潰姝岃瘝鏄惁閿佸畾
   bool locked;
 
-  /// 桌面歌词偏好主题色
+  /// 妗岄潰姝岃瘝鍋忓ソ涓婚鑹?
   int? primary;
   int? surfaceContainer;
   int? onSurface;
@@ -228,6 +239,10 @@ class HotkeyPreference {
         ),
         "goBack": HotkeyBindingPreference(
           PhysicalKeyboardKey.escape.usbHidUsage,
+          const [],
+        ),
+        "goForward": HotkeyBindingPreference(
+          PhysicalKeyboardKey.browserForward.usbHidUsage,
           const [],
         ),
         "quit": HotkeyBindingPreference(
@@ -382,7 +397,7 @@ class AppPreference {
       instance.sidebarCollapsedLarge =
           prefMap["sidebarCollapsedLarge"] ?? false;
       final needNormalizeStartPage = prefMap["startPage"] != 0;
-      // 旧版会把最后点击的侧栏页面写成启动页；没有显式设置时统一回到音乐页。
+      // 鏃х増浼氭妸鏈€鍚庣偣鍑荤殑渚ф爮椤甸潰鍐欐垚鍚姩椤碉紱娌℃湁鏄惧紡璁剧疆鏃剁粺涓€鍥炲埌闊充箰椤点€?
       instance.startPage = 0;
       final loadedPlaybackPref =
           PlaybackPreference.fromMap(prefMap["playbackPref"]);

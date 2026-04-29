@@ -1,5 +1,5 @@
-import 'package:coriander_player/theme/album_palette.dart';
-import 'package:coriander_player/theme_provider.dart';
+﻿import 'package:qisheng_player/theme/album_palette.dart';
+import 'package:qisheng_player/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

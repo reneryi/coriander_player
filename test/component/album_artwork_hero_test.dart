@@ -1,7 +1,7 @@
-import 'package:coriander_player/component/album_artwork_hero.dart';
-import 'package:coriander_player/component/album_tile.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/navigation_state.dart';
+﻿import 'package:qisheng_player/component/album_artwork_hero.dart';
+import 'package:qisheng_player/component/album_tile.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/navigation_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

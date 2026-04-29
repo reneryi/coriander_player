@@ -3,13 +3,13 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/lyric/lyric_source.dart';
-import 'package:coriander_player/music_matcher.dart';
-import 'package:coriander_player/play_service/play_service.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/lyric/lyric_source.dart';
+import 'package:qisheng_player/music_matcher.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
 import 'package:flutter/foundation.dart';
 
 /// 歌词相关状态与行为接口，便于 UI 与测试注入。

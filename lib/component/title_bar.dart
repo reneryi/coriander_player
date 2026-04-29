@@ -1,50 +1,43 @@
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/horizontal_lyric_view.dart';
-import 'package:coriander_player/component/responsive_builder.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'dart:async';
+
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/component/horizontal_lyric_view.dart';
+import 'package:qisheng_player/component/responsive_builder.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/component/window_drag_region.dart';
+import 'package:qisheng_player/hotkeys_helper.dart';
+import 'package:qisheng_player/navigation_state.dart';
+import 'package:qisheng_player/page/search_page/search_page.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:window_manager/window_manager.dart';
 
 class TitleBar extends StatelessWidget {
-  const TitleBar({
-    super.key,
-    this.largeSidebarCollapsed = false,
-  });
-
-  final bool largeSidebarCollapsed;
+  const TitleBar({super.key});
 
   @override
   Widget build(BuildContext context) {
     final chrome = context.chrome;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        chrome.shellGap,
-        12,
-        chrome.shellGap,
-        0,
-      ),
-      child: ResponsiveBuilder(
-        builder: (context, screenType) {
-          return AppSurface(
-            variant: AppSurfaceVariant.glass,
-            radius: context.surfaces.radiusXxl,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: SizedBox(
-              height: chrome.titleBarHeight,
-              child: switch (screenType) {
-                ScreenType.small => const _TitleBarSmall(),
-                ScreenType.medium => const _TitleBarMedium(),
-                ScreenType.large => _TitleBarLarge(
-                    largeSidebarCollapsed: largeSidebarCollapsed,
-                  ),
-              },
-            ),
-          );
-        },
-      ),
+    return ResponsiveBuilder(
+      builder: (context, screenType) {
+        return AppSurface(
+          variant: AppSurfaceVariant.glass,
+          radius: context.surfaces.radiusXxl,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: SizedBox(
+            height: chrome.titleBarHeight,
+            child: switch (screenType) {
+              ScreenType.small => const _TitleBarSmall(),
+              ScreenType.medium => const _TitleBarMedium(),
+              ScreenType.large => const _TitleBarLarge(),
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -54,33 +47,15 @@ class _TitleBarSmall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
+    return const Row(
       children: [
-        const _OpenDrawerBtn(),
-        const SizedBox(width: 4),
-        const NavBackBtn(),
-        Expanded(
-          child: DragToMoveArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Coriander Player',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: scheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const WindowControlls(),
+        _OpenDrawerBtn(),
+        SizedBox(width: 6),
+        _TitleNavCluster(showLogo: false),
+        SizedBox(width: 8),
+        Expanded(child: _TitleLyricPill()),
+        SizedBox(width: 8),
+        WindowControlls(),
       ],
     );
   }
@@ -91,89 +66,223 @@ class _TitleBarMedium extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
+    return const Row(
       children: [
-        const NavBackBtn(),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 180,
-          child: DragToMoveArea(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Coriander Player',
-                style: TextStyle(
-                  color: scheme.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: DragToMoveArea(
-            child: HorizontalLyricView(),
-          ),
-        ),
-        const SizedBox(width: 12),
-        const WindowControlls(),
+        _TitleNavCluster(),
+        SizedBox(width: 12),
+        Expanded(child: _TitleLyricPill()),
+        SizedBox(width: 12),
+        WindowControlls(),
       ],
     );
   }
 }
 
 class _TitleBarLarge extends StatelessWidget {
-  const _TitleBarLarge({required this.largeSidebarCollapsed});
+  const _TitleBarLarge();
 
-  final bool largeSidebarCollapsed;
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        _TitleNavCluster(),
+        SizedBox(width: 14),
+        Expanded(child: _TitleLyricPill()),
+        SizedBox(width: 12),
+        WindowControlls(),
+      ],
+    );
+  }
+}
+
+class _TitleNavCluster extends StatelessWidget {
+  const _TitleNavCluster({this.showLogo = true});
+
+  final bool showLogo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const NavBackBtn(),
+        const NavForwardBtn(),
+        if (showLogo) ...[
+          const SizedBox(width: 8),
+          const _TitleLogo(),
+        ],
+      ],
+    );
+  }
+}
+
+class _TitleLogo extends StatelessWidget {
+  const _TitleLogo();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final chrome = context.chrome;
-    return Row(
-      children: [
-        const NavBackBtn(),
-        const SizedBox(width: 8),
-        AnimatedContainer(
-          duration: context.motion.navCollapseDuration,
-          curve: context.motion.emphasized,
-          width: largeSidebarCollapsed
-              ? chrome.sideNavCollapsedWidth - 12
-              : chrome.sideNavExpandedWidth - 12,
-          child: DragToMoveArea(
-            child: Row(
-              children: [
-                Image.asset('app_icon.ico', width: 26, height: 26),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Coriander Player',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: scheme.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+    return WindowDragRegion(
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: scheme.primary.withValues(alpha: 0.14),
+          boxShadow: [
+            BoxShadow(
+              color: scheme.primary.withValues(alpha: 0.22),
+              blurRadius: 18,
+              spreadRadius: -3,
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Image.asset('app_icon.ico', width: 24, height: 24),
+      ),
+    );
+  }
+}
+
+class _TitleLyricPill extends StatefulWidget {
+  const _TitleLyricPill();
+
+  @override
+  State<_TitleLyricPill> createState() => _TitleLyricPillState();
+}
+
+class _TitleLyricPillState extends State<_TitleLyricPill> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  bool _expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    if (_focusNode.hasFocus) {
+      unawaited(HotkeysHelper.onFocusChanges(false));
+    }
+    _focusNode.removeListener(_handleFocusChanged);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    unawaited(HotkeysHelper.onFocusChanges(_focusNode.hasFocus));
+  }
+
+  void _toggleExpanded(bool value) {
+    if (_expanded == value) return;
+    setState(() => _expanded = value);
+    if (value) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _focusNode.requestFocus();
+        }
+      });
+    } else {
+      _focusNode.unfocus();
+    }
+  }
+
+  void _submitSearch(String rawQuery) {
+    final query = rawQuery.trim();
+    if (query.isEmpty) return;
+    context.push(
+      app_paths.buildSearchResultLocation(query),
+      extra: UnionSearchResult.search(query),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final motion = context.motion;
+    return AppSurface(
+      variant: AppSurfaceVariant.inset,
+      glassDensity: AppSurfaceGlassDensity.low,
+      radius: 22,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          Shortcuts(
+            shortcuts: const {
+              SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+            },
+            child: Actions(
+              actions: {
+                DismissIntent: CallbackAction<DismissIntent>(
+                  onInvoke: (_) {
+                    _controller.clear();
+                    _toggleExpanded(false);
+                    return null;
+                  },
                 ),
-              ],
+              },
+              child: AnimatedContainer(
+                duration: motion.searchExpandDuration,
+                curve: motion.emphasized,
+                width: _expanded ? 360 : 42,
+                child: _expanded
+                    ? TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Symbols.search, size: 20),
+                          suffixIcon: IconButton(
+                            enableFeedback: false,
+                            tooltip: '关闭搜索',
+                            onPressed: () {
+                              _controller.clear();
+                              _toggleExpanded(false);
+                            },
+                            icon: const Icon(Symbols.close, size: 18),
+                          ),
+                          hintText: '搜索歌曲、艺术家、专辑',
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 11),
+                        ),
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: _submitSearch,
+                        onTapOutside: (_) {
+                          if (_controller.text.trim().isEmpty) {
+                            _toggleExpanded(false);
+                          }
+                        },
+                      )
+                    : IconButton(
+                        enableFeedback: false,
+                        tooltip: '搜索',
+                        onPressed: () => _toggleExpanded(true),
+                        icon: Icon(
+                          Symbols.search,
+                          size: 20,
+                          color: scheme.onSurface.withValues(alpha: 0.68),
+                        ),
+                      ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 14),
-        const Expanded(
-          child: DragToMoveArea(
-            child: HorizontalLyricView(),
+          AnimatedContainer(
+            duration: motion.searchExpandDuration,
+            curve: motion.emphasized,
+            width: _expanded ? 14 : 8,
           ),
-        ),
-        const SizedBox(width: 12),
-        const WindowControlls(),
-      ],
+          const Expanded(
+            child: WindowDragRegion(
+              child: HorizontalLyricView(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -185,6 +294,7 @@ class _OpenDrawerBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Builder(
       builder: (context) => IconButton(
+        enableFeedback: false,
         tooltip: '打开导航栏',
         onPressed: () => Scaffold.of(context).openDrawer(),
         icon: const Icon(Symbols.side_navigation),
@@ -198,10 +308,41 @@ class NavBackBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: '返回',
-      onPressed: context.canPop() ? () => context.pop() : null,
-      icon: const Icon(Symbols.navigate_before),
+    final navigation = AppNavigationState.instance;
+    return ListenableBuilder(
+      listenable: navigation,
+      builder: (context, _) {
+        return IconButton(
+          enableFeedback: false,
+          tooltip: '返回',
+          onPressed: context.canPop() || navigation.canGoBack
+              ? () => navigation.navigateBack(context, fallback: '')
+              : null,
+          icon: const Icon(Symbols.navigate_before),
+        );
+      },
+    );
+  }
+}
+
+class NavForwardBtn extends StatelessWidget {
+  const NavForwardBtn({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final navigation = AppNavigationState.instance;
+    return ListenableBuilder(
+      listenable: navigation,
+      builder: (context, _) {
+        return IconButton(
+          enableFeedback: false,
+          tooltip: '前进',
+          onPressed: navigation.canGoForward
+              ? () => navigation.navigateForward(context)
+              : null,
+          icon: const Icon(Symbols.navigate_next),
+        );
+      },
     );
   }
 }
@@ -315,7 +456,8 @@ class _WindowControllsState extends State<WindowControlls> with WindowListener {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return AppSurface(
-      variant: AppSurfaceVariant.inset,
+      variant: AppSurfaceVariant.glass,
+      glassDensity: AppSurfaceGlassDensity.low,
       radius: 24,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(
@@ -365,6 +507,7 @@ class _WindowButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
+      enableFeedback: false,
       tooltip: tooltip,
       onPressed: onPressed,
       icon: Icon(icon, color: color),

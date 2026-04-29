@@ -1,4 +1,4 @@
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+﻿import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 
 class LargeFilledIconButtonStyle extends ButtonStyle {
@@ -10,7 +10,7 @@ class LargeFilledIconButtonStyle extends ButtonStyle {
     required this.visuals,
   }) : super(
           animationDuration: const Duration(milliseconds: 180),
-          enableFeedback: true,
+          enableFeedback: false,
           alignment: Alignment.center,
         );
 

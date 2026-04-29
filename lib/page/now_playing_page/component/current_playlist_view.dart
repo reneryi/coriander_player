@@ -1,6 +1,6 @@
-import 'package:coriander_player/play_service/playback_service.dart';
-import 'package:coriander_player/src/bass/bass_player.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+﻿import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/src/bass/bass_player.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -73,7 +73,7 @@ class _CurrentPlaylistViewState extends State<CurrentPlaylistView> {
               listenable: playbackService,
               builder: (context, _) {
                 final queue = playbackService.playlist.value;
-                final canReorder = widget.enableReorder && queue.length <= 120;
+                final canReorder = widget.enableReorder;
                 return Scrollbar(
                   controller: scrollController,
                   thumbVisibility: true,
@@ -182,6 +182,7 @@ class _PlaylistViewItem extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
+            enableFeedback: false,
             borderRadius: BorderRadius.circular(18),
             onTap: () => playbackService.playIndexOfPlaylist(index),
             child: Padding(
@@ -228,12 +229,15 @@ class _PlaylistViewItem extends StatelessWidget {
                     ),
                   ),
                   if (enableReorder)
-                    ReorderableDragStartListener(
-                      index: index,
-                      child: Icon(
-                        Icons.drag_indicator_rounded,
-                        size: dense ? 18 : 20,
-                        color: scheme.onSurface.withValues(alpha: 0.42),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ReorderableDragStartListener(
+                        index: index,
+                        child: Icon(
+                          Icons.drag_indicator_rounded,
+                          size: dense ? 18 : 20,
+                          color: scheme.onSurface.withValues(alpha: 0.42),
+                        ),
                       ),
                     ),
                 ],

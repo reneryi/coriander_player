@@ -1,6 +1,6 @@
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/theme/app_component_themes.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/theme/app_component_themes.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -12,10 +12,21 @@ class AppTheme {
     String? fontFamily,
     UiEffectsLevel effectsLevel = UiEffectsLevel.balanced,
     UiVisualStyleMode visualStyleMode = UiVisualStyleMode.glass,
+    WindowBackdropMode windowBackdropMode = WindowBackdropMode.auto,
   }) {
     GoogleFonts.config.allowRuntimeFetching = false;
-    final surfaces = _surfaceTokens(colorScheme, effectsLevel, visualStyleMode);
-    final chrome = _chromeTokens(colorScheme, effectsLevel, visualStyleMode);
+    final surfaces = _surfaceTokens(
+      colorScheme,
+      effectsLevel,
+      visualStyleMode,
+      windowBackdropMode,
+    );
+    final chrome = _chromeTokens(
+      colorScheme,
+      effectsLevel,
+      visualStyleMode,
+      windowBackdropMode,
+    );
     final accents = _accentTokens(colorScheme, visualStyleMode);
     final visuals = _visualTokens(visualStyleMode);
     final motion = _motionTokens();
@@ -31,6 +42,9 @@ class AppTheme {
       splashFactory: InkRipple.splashFactory,
       fontFamily: fontFamily,
       fontFamilyFallback: const [
+        'Segoe UI Variable Text',
+        'Segoe UI Variable Display',
+        'Microsoft YaHei UI',
         'Microsoft YaHei',
         'PingFang SC',
         'Noto Sans CJK SC',
@@ -90,7 +104,14 @@ class AppTheme {
         colorScheme,
         surfaces,
       ),
+      listTileTheme: const ListTileThemeData(enableFeedback: false),
       menuTheme: AppComponentThemes.menuTheme(surfaces),
+      menuButtonTheme: const MenuButtonThemeData(
+        style: ButtonStyle(
+          enableFeedback: false,
+        ),
+      ),
+      popupMenuTheme: const PopupMenuThemeData(enableFeedback: false),
       segmentedButtonTheme: AppComponentThemes.segmentedButtonTheme(
         colorScheme,
         surfaces,
@@ -98,6 +119,7 @@ class AppTheme {
         visuals,
       ),
       tabBarTheme: AppComponentThemes.tabBarTheme(colorScheme, accents),
+      tooltipTheme: const TooltipThemeData(enableFeedback: false),
       sliderTheme: SliderThemeData(
         trackHeight: 2,
         activeTrackColor: accents.progressActive,
@@ -115,13 +137,13 @@ class AppTheme {
         color: scheme.onSurface,
         fontWeight: FontWeight.w700,
         height: 1.04,
-        letterSpacing: -0.6,
+        letterSpacing: 0,
       ),
       headlineMedium: textTheme.headlineMedium?.copyWith(
         color: scheme.onSurface,
         fontWeight: FontWeight.w700,
         height: 1.06,
-        letterSpacing: -0.4,
+        letterSpacing: 0,
       ),
       titleLarge: textTheme.titleLarge?.copyWith(
         color: scheme.onSurface,
@@ -168,15 +190,15 @@ class AppTheme {
       scrim
     ) = switch (visualStyleMode) {
       UiVisualStyleMode.glass => (
-          isDark ? const Color(0xFFEAF1FF) : const Color(0xFF111827),
-          isDark ? const Color(0xFF0D1828) : const Color(0xFFF5F7FC),
-          isDark ? const Color(0xFF101D2E) : const Color(0xFFF8FAFF),
-          isDark ? const Color(0xFF122034) : const Color(0xFFFDFEFF),
-          isDark ? const Color(0xFF16263D) : const Color(0xFFFFFFFF),
-          isDark ? const Color(0xFF2B3E59) : const Color(0xFFD7DCE8),
-          isDark ? const Color(0xFF243349) : const Color(0xFFE7EBF4),
-          Colors.black.withValues(alpha: isDark ? 0.42 : 0.12),
-          Colors.black.withValues(alpha: isDark ? 0.56 : 0.28),
+          isDark ? const Color(0xFFEAF8FF) : const Color(0xFF17121E),
+          isDark ? const Color(0xFF07111F) : const Color(0xFFF8F4FF),
+          isDark ? const Color(0xFF0A1829) : const Color(0xFFFBF8FF),
+          isDark ? const Color(0xFF0E2236) : const Color(0xFFFFFCF6),
+          isDark ? const Color(0xFF142D45) : const Color(0xFFFFFFFF),
+          isDark ? const Color(0xFF6B91AA) : const Color(0xFFB9BFD0),
+          isDark ? const Color(0xFF2A5265) : const Color(0xFFE0E4F1),
+          Colors.black.withValues(alpha: isDark ? 0.38 : 0.1),
+          Colors.black.withValues(alpha: isDark ? 0.5 : 0.22),
         ),
       UiVisualStyleMode.contrast => (
           isDark ? const Color(0xFFF2F5FA) : const Color(0xFF0F172A),
@@ -215,21 +237,22 @@ class AppTheme {
     ColorScheme scheme,
     UiEffectsLevel effectsLevel,
     UiVisualStyleMode visualStyleMode,
+    WindowBackdropMode windowBackdropMode,
   ) {
     final isDark = scheme.brightness == Brightness.dark;
     final backdropSigma = switch (effectsLevel) {
       UiEffectsLevel.performance => 16.0,
-      UiEffectsLevel.balanced => 25.0,
+      UiEffectsLevel.balanced => 18.0,
       UiEffectsLevel.visual => 30.0,
     };
     final (windowBgTop, windowBgBottom, windowScrim) =
         switch (visualStyleMode) {
       UiVisualStyleMode.glass => (
-          isDark ? const Color(0xFF07111F) : const Color(0xFFF4F7FD),
-          isDark ? const Color(0xFF02060D) : const Color(0xFFECEFF7),
+          isDark ? const Color(0xFF061321) : const Color(0xFFF9F5FF),
+          isDark ? const Color(0xFF041B25) : const Color(0xFFFFF6DC),
           isDark
-              ? const Color(0xFF0A1526).withValues(alpha: 0.72)
-              : Colors.white.withValues(alpha: 0.56),
+              ? const Color(0xFF020813).withValues(alpha: 0.5)
+              : Colors.white.withValues(alpha: 0.38),
         ),
       UiVisualStyleMode.contrast => (
           isDark ? const Color(0xFF050A10) : const Color(0xFFEFF3F9),
@@ -239,23 +262,31 @@ class AppTheme {
               : Colors.white.withValues(alpha: 0.68),
         ),
     };
+    final (topTintAlpha, bottomTintAlpha, scrimFactor, backdropSigmaScale) =
+        _resolveBackdropChromeProfile(windowBackdropMode);
 
     return AppChromeTokens(
-      windowBgTop: windowBgTop,
-      windowBgBottom: windowBgBottom,
-      windowScrim: windowScrim,
+      windowBgTop: Color.alphaBlend(
+        scheme.primary.withValues(alpha: topTintAlpha),
+        windowBgTop,
+      ),
+      windowBgBottom: Color.alphaBlend(
+        scheme.primary.withValues(alpha: bottomTintAlpha),
+        windowBgBottom,
+      ),
+      windowScrim: windowScrim.withValues(alpha: windowScrim.a * scrimFactor),
       titleBarSurface: scheme.surfaceContainerHigh,
       titleBarStroke: scheme.outlineVariant,
       sideNavSurface: scheme.surfaceContainer,
       pagePanelSurface: scheme.surfaceContainer,
       dockSurface: scheme.surfaceContainerHigh,
-      sideNavExpandedWidth: 240,
-      sideNavCollapsedWidth: 80,
+      sideNavExpandedWidth: 168,
+      sideNavCollapsedWidth: 76,
       titleBarHeight: 56,
-      dockHeight: 82,
-      shellGap: 20,
-      shellContentMaxWidth: 1680,
-      backdropBlurSigma: backdropSigma,
+      dockHeight: 92,
+      shellGap: 12,
+      shellContentMaxWidth: 2400,
+      backdropBlurSigma: backdropSigma * backdropSigmaScale,
       searchBarExpandedWidthLarge: 336,
       searchBarExpandedWidthMedium: 272,
     );
@@ -265,19 +296,30 @@ class AppTheme {
     ColorScheme scheme,
     UiEffectsLevel effectsLevel,
     UiVisualStyleMode visualStyleMode,
+    WindowBackdropMode windowBackdropMode,
   ) {
     final isDark = scheme.brightness == Brightness.dark;
     final (glassSigma, shadowDepthScale, backdropStrategy) =
         _resolveSurfaceEffects(effectsLevel);
+    final (
+      panelAlphaDelta,
+      glassAlphaDelta,
+      sigmaScale,
+      shadowScale,
+      resolvedBackdropStrategy
+    ) = _resolveBackdropSurfaceProfile(
+      windowBackdropMode,
+      backdropStrategy,
+    );
 
     return switch (visualStyleMode) {
-      // 克制玻璃风格：轻表面、柔和描边、低强度阴影。
+      // 鍏嬪埗鐜荤拑椋庢牸锛氳交琛ㄩ潰銆佹煍鍜屾弿杈广€佷綆寮哄害闃村奖銆?
       UiVisualStyleMode.glass => AppSurfaceTokens(
           radiusSm: 14,
           radiusMd: 18,
           radiusLg: 24,
-          radiusXl: 28,
-          radiusXxl: 32,
+          radiusXl: 30,
+          radiusXxl: 34,
           surfaceBase: scheme.surface,
           surfaceRaised: scheme.surfaceContainer,
           surfaceFloating: scheme.surfaceContainerHigh,
@@ -288,21 +330,22 @@ class AppTheme {
           highlightColor: isDark
               ? Colors.white.withValues(alpha: 0.055)
               : Colors.white.withValues(alpha: 0.96),
-          shadowColor: Colors.black.withValues(alpha: isDark ? 0.34 : 0.12),
+          shadowColor: Colors.black.withValues(alpha: isDark ? 0.42 : 0.12),
           innerShadowLight: isDark
               ? Colors.white.withValues(alpha: 0.05)
               : Colors.white.withValues(alpha: 0.8),
           innerShadowDark: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
-          shadowBlurSm: 24,
-          shadowBlurLg: 42,
+          shadowBlurSm: 28,
+          shadowBlurLg: 56,
           shadowOffsetSm: 4,
-          shadowOffsetLg: 10,
-          panelAlpha: isDark ? 0.94 : 0.98,
-          glassAlpha: isDark ? 0.58 : 0.72,
-          glassSigma: glassSigma,
-          shadowDepthScale: shadowDepthScale,
+          shadowOffsetLg: 12,
+          panelAlpha: (0.48 + panelAlphaDelta).clamp(0.24, 0.82),
+          glassAlpha:
+              ((isDark ? 0.34 : 0.36) + glassAlphaDelta).clamp(0.0, 0.72),
+          glassSigma: glassSigma * sigmaScale,
+          shadowDepthScale: shadowDepthScale * shadowScale,
           effectsLevel: effectsLevel,
-          backdropStrategy: backdropStrategy,
+          backdropStrategy: resolvedBackdropStrategy,
           pressedDepth: 2,
         ),
       UiVisualStyleMode.contrast => AppSurfaceTokens(
@@ -329,15 +372,66 @@ class AppTheme {
           shadowBlurLg: 30,
           shadowOffsetSm: 4,
           shadowOffsetLg: 8,
-          panelAlpha: isDark ? 0.98 : 1.0,
-          glassAlpha: isDark ? 0.92 : 0.96,
-          glassSigma: glassSigma * 0.72,
-          shadowDepthScale: shadowDepthScale * 0.9,
+          panelAlpha:
+              ((isDark ? 0.98 : 1.0) + panelAlphaDelta).clamp(0.84, 1.0),
+          glassAlpha:
+              ((isDark ? 0.92 : 0.96) + glassAlphaDelta).clamp(0.72, 1.0),
+          glassSigma: glassSigma * 0.72 * sigmaScale,
+          shadowDepthScale: shadowDepthScale * 0.9 * shadowScale,
           effectsLevel: effectsLevel,
-          backdropStrategy: backdropStrategy == AppBackdropStrategy.forceBlur
-              ? AppBackdropStrategy.adaptive
-              : backdropStrategy,
+          backdropStrategy:
+              resolvedBackdropStrategy == AppBackdropStrategy.forceBlur
+                  ? AppBackdropStrategy.adaptive
+                  : resolvedBackdropStrategy,
           pressedDepth: 1.2,
+        ),
+    };
+  }
+
+  static (double, double, double, double) _resolveBackdropChromeProfile(
+    WindowBackdropMode mode,
+  ) {
+    return switch (mode) {
+      WindowBackdropMode.none => (0.02, 0.01, 1.25, 0.0),
+      WindowBackdropMode.auto => (0.04, 0.03, 0.92, 1.0),
+      WindowBackdropMode.mica => (0.05, 0.04, 0.82, 1.08),
+      WindowBackdropMode.acrylic => (0.12, 0.1, 0.52, 1.55),
+    };
+  }
+
+  static (double, double, double, double, AppBackdropStrategy)
+      _resolveBackdropSurfaceProfile(
+    WindowBackdropMode mode,
+    AppBackdropStrategy fallbackStrategy,
+  ) {
+    return switch (mode) {
+      WindowBackdropMode.none => (
+          0.22,
+          -0.36,
+          0.0,
+          0.72,
+          AppBackdropStrategy.solid,
+        ),
+      WindowBackdropMode.auto => (
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          fallbackStrategy,
+        ),
+      WindowBackdropMode.mica => (
+          -0.02,
+          -0.04,
+          0.88,
+          0.9,
+          AppBackdropStrategy.adaptive,
+        ),
+      WindowBackdropMode.acrylic => (
+          -0.18,
+          -0.08,
+          1.42,
+          1.18,
+          AppBackdropStrategy.forceBlur,
         ),
     };
   }
@@ -347,7 +441,7 @@ class AppTheme {
   ) {
     return switch (effectsLevel) {
       UiEffectsLevel.performance => (16.0, 0.72, AppBackdropStrategy.solid),
-      UiEffectsLevel.balanced => (30.0, 1.0, AppBackdropStrategy.adaptive),
+      UiEffectsLevel.balanced => (20.0, 0.86, AppBackdropStrategy.adaptive),
       UiEffectsLevel.visual => (36.0, 1.2, AppBackdropStrategy.forceBlur),
     };
   }
@@ -361,14 +455,14 @@ class AppTheme {
       UiVisualStyleMode.glass => AppAccentTokens(
           accent: accent,
           onAccent: scheme.onPrimary,
-          accentSoft: accent.withValues(alpha: 0.18),
+          accentSoft: accent.withValues(alpha: 0.22),
           accentContainer:
               Color.lerp(accent, scheme.surfaceContainerHigh, 0.28)!,
-          accentGlow: accent.withValues(alpha: 0.28),
-          accentFocusRing: accent.withValues(alpha: 0.44),
+          accentGlow: accent.withValues(alpha: 0.36),
+          accentFocusRing: accent.withValues(alpha: 0.52),
           progressActive: accent,
           progressInactive: accent.withValues(alpha: 0.18),
-          selectionTint: accent.withValues(alpha: 0.14),
+          selectionTint: accent.withValues(alpha: 0.2),
           hoverTint: scheme.onSurface.withValues(alpha: 0.08),
         ),
       UiVisualStyleMode.contrast => AppAccentTokens(
@@ -390,10 +484,10 @@ class AppTheme {
     return switch (visualStyleMode) {
       UiVisualStyleMode.glass => const AppVisualTokens(
           styleMode: UiVisualStyleMode.glass,
-          buttonGlowBlur: 20,
-          buttonGlowSpread: 0.6,
-          buttonGlowOpacity: 0.22,
-          buttonHoverGlowScale: 1.36,
+          buttonGlowBlur: 24,
+          buttonGlowSpread: 0.8,
+          buttonGlowOpacity: 0.28,
+          buttonHoverGlowScale: 1.42,
           buttonPressedGlowScale: 0.52,
           buttonPressOffset: 1.5,
           buttonFocusRingOpacity: 0.86,

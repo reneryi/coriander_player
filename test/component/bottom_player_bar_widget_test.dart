@@ -1,9 +1,8 @@
-import 'package:coriander_player/component/bottom_player_bar.dart';
-import 'package:coriander_player/component/audio_visualizer/liquid_audio_visualizer.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/play_service/desktop_lyric_service.dart';
-import 'package:coriander_player/play_service/lyric_service.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
+﻿import 'package:qisheng_player/component/bottom_player_bar.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/play_service/desktop_lyric_service.dart';
+import 'package:qisheng_player/play_service/lyric_service.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -42,24 +41,6 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Wide Song'), findsOneWidget);
-    expect(find.byType(LiquidAudioVisualizer), findsOneWidget);
-    final visualizerIgnorePointer = tester.widget<IgnorePointer>(
-      find
-          .ancestor(
-            of: find.byType(LiquidAudioVisualizer),
-            matching: find.byType(IgnorePointer),
-          )
-          .first,
-    );
-    expect(visualizerIgnorePointer.ignoring, isTrue);
-
-    playback.setAudioSpectrum(
-      List<double>.generate(
-        audioSpectrumBinCount,
-        (index) => index.isEven ? 0.72 : 0.28,
-      ),
-    );
-    await tester.pump();
 
     expect(tester.takeException(), isNull);
     expect(find.byType(Slider), findsWidgets);
@@ -134,6 +115,12 @@ void main() {
     expect(find.byType(Slider), findsWidgets);
 
     await tester.pumpWidget(buildFrame(920));
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.pump(const Duration(milliseconds: 260));
+
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(buildFrame(507));
     await tester.pump(const Duration(milliseconds: 80));
     await tester.pump(const Duration(milliseconds: 260));
 

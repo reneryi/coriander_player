@@ -164,25 +164,136 @@ fn is_unknown_text(value: &str) -> bool {
 }
 
 fn sanitize_metadata_text(value: &str, fallback: &str) -> String {
-    let trimmed = value.trim();
-    if trimmed.is_empty() || trimmed == "UNKNOWN" {
-        return fallback.to_string();
-    }
-
-    let has_garbled = trimmed.contains('\u{FFFD}') || trimmed.contains("锟斤拷");
-    let mut cleaned = trimmed
-        .chars()
-        .filter(|ch| *ch != '\u{FFFD}' && *ch != '\u{FEFF}' && !ch.is_control())
-        .collect::<String>();
-    if has_garbled {
-        cleaned = cleaned.replace("锟斤拷", "");
-    }
-    let cleaned = cleaned.trim();
-    if cleaned.is_empty() {
+    let fallback_cleaned = clean_metadata_text(fallback);
+    let fallback_value = if fallback_cleaned.is_empty() {
         fallback.to_string()
     } else {
-        cleaned.to_string()
+        fallback_cleaned
+    };
+    let cleaned = clean_metadata_text(value);
+    if cleaned.is_empty() || cleaned == "UNKNOWN" {
+        fallback_value
+    } else {
+        cleaned
     }
+}
+
+fn clean_metadata_text(value: &str) -> String {
+    repair_likely_mojibake(value)
+        .chars()
+        .filter(|ch| *ch != '\u{FFFD}' && *ch != '\u{FEFF}' && !ch.is_control())
+        .collect::<String>()
+        .replace("锟斤拷", "")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .to_string()
+}
+
+fn repair_likely_mojibake(value: &str) -> String {
+    if !looks_like_mojibake(value) {
+        return value.to_string();
+    }
+
+    let Some(bytes) = bytes_from_latin1_or_windows1252(value) else {
+        return value.to_string();
+    };
+
+    let Ok(decoded) = String::from_utf8(bytes) else {
+        return value.to_string();
+    };
+    let decoded = decoded.trim();
+    if decoded.is_empty() {
+        return value.to_string();
+    }
+    if contains_cjk(decoded) && !contains_cjk(value) {
+        return decoded.to_string();
+    }
+    if metadata_text_score(decoded) > metadata_text_score(value) + 2 {
+        return decoded.to_string();
+    }
+
+    value.to_string()
+}
+
+fn looks_like_mojibake(value: &str) -> bool {
+    value.contains("锟斤拷")
+        || value
+            .chars()
+            .any(|ch| matches!(ch, 'Ã' | 'Â' | 'â' | 'ã' | 'ä'..='å' | 'æ'..='ç' | 'è'..='ï' | 'ð'..='ö' | 'ø'..='ÿ'))
+}
+
+fn bytes_from_latin1_or_windows1252(value: &str) -> Option<Vec<u8>> {
+    let mut bytes = Vec::with_capacity(value.len());
+    for ch in value.chars() {
+        let code = ch as u32;
+        if code <= 0xFF {
+            bytes.push(code as u8);
+            continue;
+        }
+
+        let byte = windows1252_reverse(ch)?;
+        bytes.push(byte);
+    }
+    Some(bytes)
+}
+
+fn windows1252_reverse(ch: char) -> Option<u8> {
+    match ch {
+        '€' => Some(0x80),
+        '‚' => Some(0x82),
+        'ƒ' => Some(0x83),
+        '„' => Some(0x84),
+        '…' => Some(0x85),
+        '†' => Some(0x86),
+        '‡' => Some(0x87),
+        'ˆ' => Some(0x88),
+        '‰' => Some(0x89),
+        'Š' => Some(0x8A),
+        '‹' => Some(0x8B),
+        'Œ' => Some(0x8C),
+        'Ž' => Some(0x8E),
+        '‘' => Some(0x91),
+        '’' => Some(0x92),
+        '“' => Some(0x93),
+        '”' => Some(0x94),
+        '•' => Some(0x95),
+        '–' => Some(0x96),
+        '—' => Some(0x97),
+        '˜' => Some(0x98),
+        '™' => Some(0x99),
+        'š' => Some(0x9A),
+        '›' => Some(0x9B),
+        'œ' => Some(0x9C),
+        'ž' => Some(0x9E),
+        'Ÿ' => Some(0x9F),
+        _ => None,
+    }
+}
+
+fn metadata_text_score(value: &str) -> i32 {
+    let mut score = 0;
+    for ch in value.chars() {
+        if is_cjk_char(ch) {
+            score += 4;
+        } else if ch == '\u{FFFD}' || ch == '\u{FEFF}' || ch.is_control() {
+            score -= 6;
+        } else if looks_like_mojibake(&ch.to_string()) {
+            score -= 2;
+        } else if ch.is_ascii() {
+            score += 1;
+        }
+    }
+    score
+}
+
+fn contains_cjk(value: &str) -> bool {
+    value.chars().any(is_cjk_char)
+}
+
+fn is_cjk_char(ch: char) -> bool {
+    matches!(ch as u32, 0x3040..=0x30FF | 0x3400..=0x9FFF | 0xAC00..=0xD7AF | 0x1100..=0x11FF | 0x3130..=0x318F | 0xF900..=0xFAFF | 0x20000..=0x2FA1F)
 }
 
 fn is_cue_path(path: impl AsRef<Path>) -> bool {
@@ -559,7 +670,7 @@ impl Audio {
             let title = track
                 .title
                 .clone()
-                .unwrap_or_else(|| format!("Track {:02}", track.track));
+                .unwrap_or_else(|| format!("音轨 {:02}", track.track));
             let artist = track
                 .performer
                 .clone()
@@ -1538,4 +1649,82 @@ pub fn update_index(index_path: String, sink: StreamSink<IndexActionState>) -> a
 
     fs::File::create(index_path)?.write_all(index.to_string().as_bytes())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn latin1_mojibake(value: &str) -> String {
+        value
+            .as_bytes()
+            .iter()
+            .map(|byte| char::from(*byte))
+            .collect()
+    }
+
+    fn windows1252_mojibake(value: &str) -> String {
+        value
+            .as_bytes()
+            .iter()
+            .map(|byte| match byte {
+                0x80 => '€',
+                0x82 => '‚',
+                0x83 => 'ƒ',
+                0x84 => '„',
+                0x85 => '…',
+                0x86 => '†',
+                0x87 => '‡',
+                0x88 => 'ˆ',
+                0x89 => '‰',
+                0x8A => 'Š',
+                0x8B => '‹',
+                0x8C => 'Œ',
+                0x8E => 'Ž',
+                0x91 => '‘',
+                0x92 => '’',
+                0x93 => '“',
+                0x94 => '”',
+                0x95 => '•',
+                0x96 => '–',
+                0x97 => '—',
+                0x98 => '˜',
+                0x99 => '™',
+                0x9A => 'š',
+                0x9B => '›',
+                0x9C => 'œ',
+                0x9E => 'ž',
+                0x9F => 'Ÿ',
+                _ => char::from(*byte),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn sanitize_metadata_text_repairs_latin1_mojibake() {
+        let garbled = latin1_mojibake("こんにちは");
+        assert_eq!(sanitize_metadata_text(&garbled, "fallback"), "こんにちは");
+    }
+
+    #[test]
+    fn sanitize_metadata_text_repairs_windows1252_mojibake() {
+        let garbled = windows1252_mojibake("中文");
+        assert_eq!(sanitize_metadata_text(&garbled, "fallback"), "中文");
+    }
+
+    #[test]
+    fn sanitize_metadata_text_removes_corrupted_tokens() {
+        assert_eq!(
+            sanitize_metadata_text("锟斤拷歌曲\u{FEFF}", "fallback"),
+            "歌曲"
+        );
+        assert_eq!(
+            sanitize_metadata_text("\u{FFFD}\u{FEFF}", "fallback"),
+            "fallback"
+        );
+        assert_eq!(
+            sanitize_metadata_text("UNKNOWN", "未知艺术家"),
+            "未知艺术家"
+        );
+    }
 }

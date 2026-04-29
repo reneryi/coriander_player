@@ -1,6 +1,6 @@
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/hotkeys_helper.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/hotkeys_helper.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -58,7 +58,7 @@ class _ThemePickerDialogState extends State<ThemePickerDialog> {
                     }
                   },
                   decoration: const InputDecoration(
-                    labelText: "Hex RGB",
+                    labelText: "十六进制 RGB",
                     border: OutlineInputBorder(),
                   ),
                 ),

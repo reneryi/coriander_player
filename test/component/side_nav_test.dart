@@ -1,6 +1,6 @@
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/component/side_nav.dart';
-import 'package:coriander_player/theme/app_theme.dart';
+﻿import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/component/side_nav.dart';
+import 'package:qisheng_player/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -44,7 +44,7 @@ Widget _buildApp({
 }
 
 void main() {
-  testWidgets('SideNav expanded width is 240 with active indicator', (
+  testWidgets('SideNav expanded width is 168 with active indicator', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -61,8 +61,9 @@ void main() {
 
     expect(
       tester.getSize(find.byKey(const ValueKey('side-nav-large'))).width,
-      240,
+      168,
     );
+    expect(tester.takeException(), isNull);
     expect(find.text('音乐'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('side-nav-active-indicator')),
@@ -74,7 +75,7 @@ void main() {
     );
   });
 
-  testWidgets('SideNav collapsed width is 80 and keeps tooltip', (
+  testWidgets('SideNav collapsed width is 76 and keeps tooltip', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1400, 900);
@@ -91,8 +92,9 @@ void main() {
 
     expect(
       tester.getSize(find.byKey(const ValueKey('side-nav-large'))).width,
-      80,
+      76,
     );
+    expect(tester.takeException(), isNull);
     expect(find.byTooltip('音乐'), findsOneWidget);
   });
 }

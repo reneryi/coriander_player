@@ -1,11 +1,11 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/page/now_playing_page/component/lyric_view_controls.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_view_controls.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -55,6 +55,7 @@ class LyricViewTile extends StatelessWidget {
             curve: motion.normal,
             padding: EdgeInsets.symmetric(vertical: isMainLine ? 4 : 0),
             child: InkWell(
+              enableFeedback: false,
               onTap: onTap,
               borderRadius: BorderRadius.circular(14.0),
               child: line is SyncLyricLine
@@ -315,7 +316,7 @@ class _LrcLineContent extends StatelessWidget {
     final alignment = lyricViewController.lyricTextAlign;
     final showTranslation = lyricViewController.showTranslation;
 
-    final splited = lrcLine.content.split("┃");
+    final splited = lrcLine.content.split("─");
     final List<Text> contents = [
       buildPrimaryText(splited.first, scheme, alignment, lyricFontSize),
     ];
@@ -404,7 +405,7 @@ class _LrcLineContent extends StatelessWidget {
 }
 
 /// 歌词间奏表示
-/// lrcLine 和 syncLine 必须有且只有一个不为空
+/// lrcLine 鍜?syncLine 蹇呴』鏈変笖鍙湁涓€涓笉涓虹┖
 class LyricTransitionTile extends StatefulWidget {
   final LrcLine? lrcLine;
   final SyncLyricLine? syncLine;

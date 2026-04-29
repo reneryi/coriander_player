@@ -1,6 +1,6 @@
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/page/folders_page.dart';
-import 'package:coriander_player/theme/app_theme.dart';
+﻿import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/page/folders_page.dart';
+import 'package:qisheng_player/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

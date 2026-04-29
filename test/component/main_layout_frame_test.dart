@@ -1,6 +1,6 @@
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/main_layout_frame.dart';
-import 'package:coriander_player/component/ui/liquid_gradient_background.dart';
+﻿import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/main_layout_frame.dart';
+import 'package:qisheng_player/component/ui/liquid_gradient_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -46,7 +46,7 @@ void main() {
     final visual = resolveLiquidGradientProfile(UiEffectsLevel.visual);
 
     expect(performance.animated, isFalse);
-    expect(balanced.animated, isTrue);
+    expect(balanced.animated, isFalse);
     expect(visual.animated, isTrue);
     expect(visual.bandOpacity, greaterThan(balanced.bandOpacity));
   });

@@ -1,10 +1,9 @@
 import 'dart:ui';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/page/uni_page_components.dart';
-import 'package:coriander_player/page/page_scaffold.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/page/uni_page_components.dart';
+import 'package:qisheng_player/page/page_scaffold.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -32,9 +31,10 @@ class SortMethodDesc<T> {
 
 enum SortOrder {
   ascending,
-  decending;
+  descending;
 
   static SortOrder? fromString(String sortOrder) {
+    if (sortOrder == 'decending') return SortOrder.descending;
     for (var value in SortOrder.values) {
       if (value.name == sortOrder) return value;
     }
@@ -130,13 +130,14 @@ class MultiSelectController<T> extends ChangeNotifier {
 }
 
 /// `AudiosPage`, `ArtistsPage`, `AlbumsPage`, `FoldersPage`, `FolderDetailPage`
-/// 的通用页面容器，提供排序、视图切换、多选和定位等能力。
+/// 鐨勯€氱敤椤甸潰瀹瑰櫒锛屾彁渚涙帓搴忋€佽鍥惧垏鎹€佸閫夊拰瀹氫綅绛夎兘鍔涖€?
 class UniPage<T> extends StatefulWidget {
   const UniPage({
     super.key,
     required this.pref,
     required this.title,
     this.subtitle,
+    this.titleAction,
     required this.contentList,
     required this.contentBuilder,
     this.primaryAction,
@@ -153,12 +154,17 @@ class UniPage<T> extends StatefulWidget {
     this.sideIndexLabels,
     this.sideIndexResolver,
     this.locateIndexResolver,
+    this.extraActions = const <Widget>[],
+    this.rightPaneBuilder,
+    this.showRightPane = false,
+    this.rightPaneWidth = 296,
   });
 
   final PagePreference pref;
 
   final String title;
   final String? subtitle;
+  final Widget? titleAction;
 
   final List<T> contentList;
   final ContentBuilder<T> contentBuilder;
@@ -181,6 +187,10 @@ class UniPage<T> extends StatefulWidget {
   final List<String>? sideIndexLabels;
   final SideIndexResolver<T>? sideIndexResolver;
   final LocateIndexResolver<T>? locateIndexResolver;
+  final List<Widget> extraActions;
+  final WidgetBuilder? rightPaneBuilder;
+  final bool showRightPane;
+  final double rightPaneWidth;
 
   @override
   State<UniPage<T>> createState() => _UniPageState<T>();
@@ -345,6 +355,7 @@ class _UniPageState<T> extends State<UniPage<T>> {
         setContentView: setContentView,
       ));
     }
+    secondaryActions.addAll(widget.extraActions);
 
     return widget.multiSelectController == null
         ? result(null, primaryAction, secondaryActions)
@@ -368,12 +379,23 @@ class _UniPageState<T> extends State<UniPage<T>> {
     final sideIndexLabels = sideIndex ?? const <String>[];
     final hasLocateButton =
         widget.locateTo != null || widget.locateIndexResolver != null;
-    final rightReserved = (hasSideIndex || hasLocateButton) ? 64.0 : 0.0;
+    final hasRightPane = widget.rightPaneBuilder != null;
+    final showRightPane = hasRightPane && widget.showRightPane;
+    const sideRailWidth = 48.0;
+    const sideRailPadding = 10.0;
+    const rightPaneGap = 14.0;
+    final sideRailReserved = (hasSideIndex || hasLocateButton) ? 60.0 : 0.0;
+    final rightPaneReserved =
+        showRightPane ? widget.rightPaneWidth + rightPaneGap : 0.0;
+    final rightReserved = sideRailReserved + rightPaneReserved;
+    final sideRailRight = showRightPane ? 6.0 : sideRailPadding;
+    final rightPaneRight =
+        (hasSideIndex || hasLocateButton) ? sideRailWidth + 18.0 : 10.0;
     final listPadding = EdgeInsets.fromLTRB(
       0,
       0,
       rightReserved,
-      context.chrome.dockHeight + 56,
+      32,
     );
 
     final listBody = Material(
@@ -426,16 +448,58 @@ class _UniPageState<T> extends State<UniPage<T>> {
           ),
       },
     );
+    final rightPaneChild = widget.rightPaneBuilder?.call(context);
 
     final scheme = Theme.of(context).colorScheme;
     final body = Stack(
       children: [
         listBody,
-        if (hasSideIndex)
+        if (hasRightPane)
           Positioned(
-            right: 4,
-            top: 12,
-            bottom: hasLocateButton ? 72 : 12,
+            top: 8,
+            bottom: 8,
+            right: rightPaneRight,
+            child: ClipRect(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: showRightPane ? 1 : 0),
+                duration: context.motion.panelTransitionDuration,
+                curve: context.motion.normal,
+                builder: (context, progress, _) {
+                  final clamped = progress.clamp(0.0, 1.0);
+                  final width = widget.rightPaneWidth * clamped;
+                  final slideX = (1 - clamped) * 18;
+                  return SizedBox(
+                    width: width,
+                    child: IgnorePointer(
+                      ignoring: clamped < 0.02,
+                      child: Opacity(
+                        opacity: clamped,
+                        child: Transform.translate(
+                          offset: Offset(slideX, 0),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: SizedBox(
+                              width: widget.rightPaneWidth,
+                              child: clamped <= 0.001
+                                  ? const SizedBox.shrink()
+                                  : rightPaneChild ?? const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        if (hasSideIndex)
+          AnimatedPositioned(
+            duration: context.motion.panelTransitionDuration,
+            curve: context.motion.normal,
+            right: sideRailRight,
+            top: 8,
+            bottom: hasLocateButton ? 58 : 8,
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final availableHeight = constraints.maxHeight;
@@ -446,12 +510,11 @@ class _UniPageState<T> extends State<UniPage<T>> {
                     ? 0.0
                     : innerHeight / sideIndexLabels.length;
                 final fontSize = (itemHeight - 2.0).clamp(6.0, 13.0);
+                final tapHeight = (itemHeight - 1.0).clamp(12.0, 22.0);
 
-                return AppSurface(
-                  variant: AppSurfaceVariant.floating,
-                  radius: 22,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                return SizedBox(
+                  key: const ValueKey('uni-page-side-index'),
+                  width: sideRailWidth,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
@@ -460,17 +523,32 @@ class _UniPageState<T> extends State<UniPage<T>> {
                         final label = sideIndexLabels[i];
                         final selected = label == _activeSideIndexLabel;
                         return Expanded(
-                          child: SizedBox(
-                            width: 26,
+                          child: Center(
                             child: InkWell(
+                              enableFeedback: false,
                               onTap: () => _jumpBySideIndex(label),
-                              borderRadius: BorderRadius.circular(9),
-                              child: Ink(
+                              borderRadius: BorderRadius.circular(8),
+                              child: AnimatedContainer(
+                                duration:
+                                    context.motion.microInteractionDuration,
+                                curve: context.motion.fast,
+                                width: 24,
+                                height: tapHeight,
                                 decoration: BoxDecoration(
                                   color: selected
-                                      ? scheme.primary
+                                      ? scheme.primary.withValues(alpha: 0.9)
                                       : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: selected
+                                      ? [
+                                          BoxShadow(
+                                            color: scheme.primary
+                                                .withValues(alpha: 0.28),
+                                            blurRadius: 12,
+                                            spreadRadius: -4,
+                                          ),
+                                        ]
+                                      : null,
                                 ),
                                 child: Center(
                                   child: Text(
@@ -498,16 +576,37 @@ class _UniPageState<T> extends State<UniPage<T>> {
             ),
           ),
         if (hasLocateButton)
-          Positioned(
-            right: 4,
-            bottom: 16,
-            child: AppSurface(
-              variant: AppSurfaceVariant.floating,
-              radius: 24,
-              child: IconButton(
-                tooltip: '瀹氫綅褰撳墠闊充箰',
-                onPressed: _jumpToLocateTarget,
-                icon: const Icon(Icons.my_location_rounded),
+          AnimatedPositioned(
+            duration: context.motion.panelTransitionDuration,
+            curve: context.motion.normal,
+            right: sideRailRight,
+            bottom: 12,
+            child: SizedBox(
+              width: sideRailWidth,
+              height: sideRailWidth,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.08),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.14),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: scheme.primary.withValues(alpha: 0.18),
+                        blurRadius: 18,
+                        spreadRadius: -6,
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    key: const ValueKey('uni-page-locate-button'),
+                    tooltip: '定位当前音乐',
+                    onPressed: _jumpToLocateTarget,
+                    icon: const Icon(Icons.my_location_rounded),
+                  ),
+                ),
               ),
             ),
           ),
@@ -529,7 +628,7 @@ class _UniPageState<T> extends State<UniPage<T>> {
         effectiveSecondaryActions = [
           ...effectiveSecondaryActions,
           IconButton.filledTonal(
-            tooltip: "多选",
+            tooltip: "更多",
             onPressed: () {
               multiSelectController.useMultiSelectView(true);
               multiSelectController.clear();
@@ -543,6 +642,7 @@ class _UniPageState<T> extends State<UniPage<T>> {
     return PageScaffold(
       title: widget.title,
       subtitle: widget.subtitle,
+      titleAction: widget.titleAction,
       primaryAction: effectivePrimaryAction,
       secondaryActions: effectiveSecondaryActions,
       body: body,

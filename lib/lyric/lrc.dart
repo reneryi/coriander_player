@@ -1,8 +1,8 @@
-import 'dart:math';
+﻿import 'dart:math';
 
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/src/rust/api/tag_reader.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/src/rust/api/tag_reader.dart';
 
 class LrcLine extends UnsyncLyricLine {
   bool isBlank;
@@ -89,8 +89,8 @@ class Lrc extends Lyric {
     return {"type": source, "lyric": lines}.toString();
   }
 
-  /// 歌词一般是有序的
-  /// 按照时间升序排序，保留原文和译文的顺序，需要使用稳定的排序算法
+  /// 姝岃瘝涓€鑸槸鏈夊簭鐨?
+  /// 鎸夌収鏃堕棿鍗囧簭鎺掑簭锛屼繚鐣欏師鏂囧拰璇戞枃鐨勯『搴忥紝闇€瑕佷娇鐢ㄧǔ瀹氱殑鎺掑簭绠楁硶
   /// 这里使用插入排序
   void _sort() {
     for (int i = 1; i < lines.length; i++) {
@@ -178,8 +178,8 @@ class Lrc extends Lyric {
     return result._combineLrcLine(separator);
   }
 
-  /// 只支持读取 ID3V2, VorbisComment, Mp4Ilst 存储的内嵌歌词
-  /// 以及相同目录相同文件名的 .lrc 外挂歌词（utf-8 or utf-16）
+  /// 鍙敮鎸佽鍙?ID3V2, VorbisComment, Mp4Ilst 瀛樺偍鐨勫唴宓屾瓕璇?
+  /// 以及相同目录相同文件名的 .lrc 澶栨寕姝岃瘝锛坲tf-8 or utf-16锛?
   static Lrc _clipToCueSegment(Audio belongTo, Lrc lyric) {
     if (!belongTo.isCueTrack) return lyric;
 
@@ -214,11 +214,11 @@ class Lrc extends Lyric {
     return Lrc(clippedLines, lyric.source);
   }
 
-  /// 只支持读取 ID3V2, VorbisComment, Mp4Ilst 存储的内嵌歌词
-  /// 以及相同目录相同文件名的 .lrc 外挂歌词（utf-8 or utf-16）
+  /// 鍙敮鎸佽鍙?ID3V2, VorbisComment, Mp4Ilst 瀛樺偍鐨勫唴宓屾瓕璇?
+  /// 以及相同目录相同文件名的 .lrc 澶栨寕姝岃瘝锛坲tf-8 or utf-16锛?
   static Future<Lrc?> fromAudioPath(
     Audio belongTo, {
-    String? separator = "┃",
+    String? separator = "─",
   }) async {
     Lrc? lyric = await getLyricFromPath(path: belongTo.mediaPath).then((value) {
       if (value == null) {

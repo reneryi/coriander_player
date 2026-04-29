@@ -3,18 +3,18 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/play_count_store.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/src/bass/bass_player.dart';
-import 'package:coriander_player/src/rust/api/smtc_flutter.dart';
-import 'package:coriander_player/theme_provider.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/play_count_store.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/src/bass/bass_player.dart';
+import 'package:qisheng_player/src/rust/api/smtc_flutter.dart';
+import 'package:qisheng_player/theme_provider.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/foundation.dart';
 
 enum PlayMode {
-  /// 顺序播放到播放列表结尾
+  /// 椤哄簭鎾斁鍒版挱鏀惧垪琛ㄧ粨灏?
   forward,
 
   /// 循环整个播放列表
@@ -31,54 +31,7 @@ enum PlayMode {
   }
 }
 
-/// 播放相关状态与控制接口，便于桌面 UI 和测试共用。
-const audioSpectrumBinCount = 64;
-
-List<double> smoothAudioSpectrum({
-  required List<double> previous,
-  required List<double> next,
-  required bool active,
-  int binCount = audioSpectrumBinCount,
-  double rawWeight = 0.2,
-  double decay = 0.84,
-}) {
-  final resolvedBinCount = binCount.clamp(1, 256).toInt();
-  final clampedRawWeight = rawWeight.clamp(0.0, 1.0).toDouble();
-  final clampedDecay = decay.clamp(0.0, 1.0).toDouble();
-
-  if (previous.isEmpty && next.isEmpty) return const <double>[];
-
-  final output = List<double>.filled(resolvedBinCount, 0);
-  for (var i = 0; i < resolvedBinCount; i++) {
-    final oldValue = _spectrumValueAt(previous, i, resolvedBinCount);
-    if (!active || next.isEmpty) {
-      output[i] = oldValue * clampedDecay;
-      continue;
-    }
-
-    final rawValue = _spectrumValueAt(next, i, resolvedBinCount);
-    output[i] = oldValue * (1 - clampedRawWeight) + rawValue * clampedRawWeight;
-  }
-
-  if (output.every((value) => value < 0.003)) return const <double>[];
-  return output;
-}
-
-double _spectrumValueAt(List<double> values, int index, int targetLength) {
-  if (values.isEmpty) return 0;
-  if (values.length == 1 || targetLength <= 1) {
-    return values.first.clamp(0.0, 1.0).toDouble();
-  }
-
-  final sourcePosition = index * (values.length - 1) / (targetLength - 1);
-  final left = sourcePosition.floor();
-  final right = sourcePosition.ceil();
-  final t = sourcePosition - left;
-  final leftValue = values[left].clamp(0.0, 1.0).toDouble();
-  final rightValue = values[right].clamp(0.0, 1.0).toDouble();
-  return leftValue + (rightValue - leftValue) * t;
-}
-
+/// 鎾斁鐩稿叧鐘舵€佷笌鎺у埗鎺ュ彛锛屼究浜庢闈?UI 鍜屾祴璇曞叡鐢ㄣ€?
 /// Playback state and controls shared by UI and tests.
 abstract class PlaybackController extends ChangeNotifier {
   Audio? get nowPlaying;
@@ -92,7 +45,6 @@ abstract class PlaybackController extends ChangeNotifier {
   ValueNotifier<double> get volumeDspNotifier;
   double get volumeDsp;
   ValueNotifier<PlayMode> get playMode;
-  ValueListenable<List<double>> get audioSpectrum;
 
   void setPlayMode(PlayMode playMode);
   void setVolumeDsp(double volume);
@@ -107,14 +59,13 @@ abstract class PlaybackController extends ChangeNotifier {
   void removeAudioFromPlaylistByPath(String path);
 }
 
-/// 只通知 now playing 变更
+/// 鍙€氱煡 now playing 鍙樻洿
 class PlaybackService extends PlaybackController {
   final PlayService playService;
 
   late StreamSubscription _playerStateStreamSub;
   late StreamSubscription _smtcEventStreamSub;
   late StreamSubscription<double> _rawPositionStreamSub;
-  Timer? _audioSpectrumSampler;
 
   PlaybackService(this.playService) {
     _playerStateStreamSub = playerStateStream.listen((event) {
@@ -142,10 +93,6 @@ class PlaybackService extends PlaybackController {
     });
 
     _rawPositionStreamSub = _player.positionStream.listen(_handleRawPosition);
-    _audioSpectrumSampler = Timer.periodic(
-      const Duration(milliseconds: 33),
-      (_) => _sampleAudioSpectrum(),
-    );
   }
 
   final _player = BassPlayer();
@@ -187,9 +134,6 @@ class PlaybackService extends PlaybackController {
 
   late final _playMode = ValueNotifier(_pref.playMode);
   ValueNotifier<PlayMode> get playMode => _playMode;
-
-  final _audioSpectrum = ValueNotifier<List<double>>(const []);
-  ValueListenable<List<double>> get audioSpectrum => _audioSpectrum;
 
   void setPlayMode(PlayMode playMode) {
     if (this.playMode.value == playMode) return;
@@ -289,23 +233,6 @@ class PlaybackService extends PlaybackController {
     _rememberPlaybackSessionThrottled();
   }
 
-  void _sampleAudioSpectrum() {
-    final active = nowPlaying != null && playerState == PlayerState.playing;
-    final rawSpectrum = active
-        ? _player.sampleFft(bins: audioSpectrumBinCount)
-        : const <double>[];
-    final nextSpectrum = smoothAudioSpectrum(
-      previous: _audioSpectrum.value,
-      next: rawSpectrum,
-      active: active && rawSpectrum.isNotEmpty,
-    );
-
-    if (_audioSpectrum.value.isEmpty && nextSpectrum.isEmpty) return;
-    if (!listEquals(_audioSpectrum.value, nextSpectrum)) {
-      _audioSpectrum.value = nextSpectrum;
-    }
-  }
-
   double get length => _resolveNowPlayingLength();
 
   double get position => _toDisplayPosition(_player.position);
@@ -330,7 +257,7 @@ class PlaybackService extends PlaybackController {
     _player.setVolumeDsp(_resolveOutputVolumeDsp(audio));
   }
 
-  /// 修改解码时的音量（不影响 Windows 系统音量）
+  /// 修改解码时的音量（不影响 Windows 绯荤粺闊抽噺锛?
   void setVolumeDsp(double volume) {
     _pref.volumeDsp = volume;
     _volumeDsp.value = volume;
@@ -355,11 +282,11 @@ class PlaybackService extends PlaybackController {
 
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
 
-  /// 1. 更新 [_playlistIndex] 为 [audioIndex]
-  /// 2. 更新 [nowPlaying] 为 playlist[_nowPlayingIndex]
+  /// 1. 更新 [_playlistIndex] 一[audioIndex]
+  /// 2. 更新 [nowPlaying] 一playlist[_nowPlayingIndex]
   /// 3. _bassPlayer.setSource
   /// 4. 设置解码音量
-  /// 4. 获取歌词 **将 [_nextLyricLine] 置为0**
+  /// 4. 鑾峰彇姝岃瘝 **灏?[_nextLyricLine] 置为0**
   /// 5. 播放
   /// 6. 通知并更新主题色
   void _loadAndPlay(int audioIndex, List<Audio> playlist) {
@@ -367,7 +294,6 @@ class PlaybackService extends PlaybackController {
       _playlistIndex = audioIndex;
       nowPlaying = playlist[audioIndex];
       _cueAutoNextTriggered = false;
-      _audioSpectrum.value = const [];
       _player.setSource(nowPlaying!.mediaPath);
       if (nowPlaying!.isCueTrack) {
         _player.seek((nowPlaying!.cueStartMs ?? 0) / 1000.0);
@@ -383,9 +309,9 @@ class PlaybackService extends PlaybackController {
 
       _smtc.updateState(state: SMTCState.playing);
       _smtc.updateDisplay(
-        title: nowPlaying!.title,
-        artist: nowPlaying!.artist,
-        album: nowPlaying!.album,
+        title: nowPlaying!.displayTitle,
+        artist: nowPlaying!.displayArtist,
+        album: nowPlaying!.displayAlbum,
         duration: (length * 1000).floor(),
         path: nowPlaying!.mediaPath,
       );
@@ -404,7 +330,7 @@ class PlaybackService extends PlaybackController {
     }
   }
 
-  /// 播放当前播放列表的第几项，只能用在播放列表界面
+  /// 鎾斁褰撳墠鎾斁鍒楄〃鐨勭鍑犻」锛屽彧鑳界敤鍦ㄦ挱鏀惧垪琛ㄧ晫闈?
   void playIndexOfPlaylist(int audioIndex) {
     _loadAndPlay(audioIndex, playlist.value);
   }
@@ -501,7 +427,7 @@ class PlaybackService extends PlaybackController {
     final currentIndex = _playlistIndex!;
     final allIndexes = List<int>.generate(playlist.value.length, (i) => i);
 
-    // 随机切歌时默认不重复当前歌曲；列表较长时再额外避免“立刻回到上次来源”。
+    // 闅忔満鍒囨瓕鏃堕粯璁や笉閲嶅褰撳墠姝屾洸锛涘垪琛ㄨ緝闀挎椂鍐嶉澶栭伩鍏嶁€滅珛鍒诲洖鍒颁笂娆℃潵婧愨€濄€?
     final blocked = <int>{currentIndex};
     if (playlist.value.length > 2 && _lastManualRandomSourceIndex != null) {
       blocked.add(_lastManualRandomSourceIndex!);
@@ -654,12 +580,27 @@ class PlaybackService extends PlaybackController {
     }
   }
 
-  /// 再次播放。在顺序播放完最后一曲时再次按播放时使用。
-  /// 与 [start] 的差别在于它会通知重绘组件
+  /// 鍐嶆鎾斁銆傚湪椤哄簭鎾斁瀹屾渶鍚庝竴鏇叉椂鍐嶆鎸夋挱鏀炬椂浣跨敤銆?
+  /// 涓?[start] 鐨勫樊鍒湪浜庡畠浼氶€氱煡閲嶇粯缁勪欢
   void playAgain() => _nextAudio_singleLoop();
 
-  /// 外部修改了当前播放歌曲的标签/封面后调用，通知 UI 刷新
+  /// 外部修改了当前播放歌曲的标签/封面后调用，通知 UI 鍒锋柊
   void refreshNowPlaying() {
+    final audio = nowPlaying;
+    if (audio != null) {
+      _smtc.updateDisplay(
+        title: audio.displayTitle,
+        artist: audio.displayArtist,
+        album: audio.displayAlbum,
+        duration: (length * 1000).floor(),
+        path: audio.mediaPath,
+      );
+      ThemeProvider.instance.applyThemeFromAudio(audio);
+      playService.desktopLyricService.canSendMessage.then((canSend) {
+        if (!canSend) return;
+        playService.desktopLyricService.sendNowPlayingMessage(audio);
+      });
+    }
     notifyListeners();
   }
 
@@ -750,9 +691,9 @@ class PlaybackService extends PlaybackController {
 
       _smtc.updateState(state: SMTCState.paused);
       _smtc.updateDisplay(
-        title: nowPlaying!.title,
-        artist: nowPlaying!.artist,
-        album: nowPlaying!.album,
+        title: nowPlaying!.displayTitle,
+        artist: nowPlaying!.displayArtist,
+        album: nowPlaying!.displayAlbum,
         duration: (length * 1000).floor(),
         path: nowPlaying!.mediaPath,
       );
@@ -763,11 +704,9 @@ class PlaybackService extends PlaybackController {
 
   void close() {
     _rememberPlaybackSession(save: true);
-    _audioSpectrumSampler?.cancel();
     _playerStateStreamSub.cancel();
     _smtcEventStreamSub.cancel();
     _rawPositionStreamSub.cancel();
-    _audioSpectrum.dispose();
     _positionStreamController.close();
     _player.free();
     _smtc.close();

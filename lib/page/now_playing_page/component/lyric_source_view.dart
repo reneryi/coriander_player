@@ -1,14 +1,15 @@
-import 'dart:math';
+﻿import 'dart:math';
 
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/lyric/lyric_source.dart';
-import 'package:coriander_player/music_matcher.dart';
-import 'package:coriander_player/page/now_playing_page/component/vertical_lyric_view.dart';
-import 'package:coriander_player/play_service/play_service.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/lyric/lyric_source.dart';
+import 'package:qisheng_player/music_matcher.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_controls_visibility.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:provider/provider.dart';
 
 class SetLyricSourceBtn extends StatelessWidget {
   const SetLyricSourceBtn({super.key});
@@ -53,12 +54,14 @@ class _SetLyricSourceBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lyricService = PlayService.instance.lyricService;
+    final visibilityController =
+        context.read<LyricControlsVisibilityController>();
     return MenuAnchor(
       onOpen: () {
-        ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = true;
+        visibilityController.setMenuOpen(true);
       },
       onClose: () {
-        ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = false;
+        visibilityController.setMenuOpen(false);
       },
       menuChildren: [
         MenuItemButton(
@@ -83,6 +86,7 @@ class _SetLyricSourceBtn extends StatelessWidget {
         ),
       ],
       builder: (context, controller, _) => IconButton(
+        enableFeedback: false,
         onPressed: PlayService.instance.playbackService.nowPlaying == null
             ? null
             : () {
@@ -288,7 +292,7 @@ class _LyricSourceTileState extends State<_LyricSourceTile> {
 
           final syncLine = currLine as SyncLyricLine;
           return Text(
-            "当前：${syncLine.content}${syncLine.translation != null ? "┃${syncLine.translation}" : ""}",
+            "当前：${syncLine.content}${syncLine.translation != null ? "─${syncLine.translation}" : ""}",
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           );

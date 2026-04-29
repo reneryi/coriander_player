@@ -1,10 +1,15 @@
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/component/responsive_builder.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+﻿import 'dart:ui' show lerpDouble;
+
+import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/component/responsive_builder.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+
+const _sideNavTransitionDuration = Duration(milliseconds: 280);
+const _sideNavTransitionCurve = Curves.easeInOutCubic;
 
 class DestinationDesc {
   const DestinationDesc(this.icon, this.label, this.desPath);
@@ -43,7 +48,7 @@ class SideNav extends StatelessWidget {
     void onDestinationSelected(int value) {
       if (value == selected) return;
 
-      context.push(destinations[value].desPath);
+      context.go(destinations[value].desPath);
 
       final scaffold = Scaffold.maybeOf(context);
       if (scaffold?.hasDrawer ?? false) {
@@ -85,8 +90,8 @@ class SideNav extends StatelessWidget {
           case ScreenType.large:
             return AnimatedContainer(
               key: const ValueKey('side-nav-large'),
-              duration: context.motion.navCollapseDuration,
-              curve: context.motion.emphasized,
+              duration: _sideNavTransitionDuration,
+              curve: _sideNavTransitionCurve,
               width: collapsed
                   ? context.chrome.sideNavCollapsedWidth
                   : context.chrome.sideNavExpandedWidth,
@@ -121,125 +126,191 @@ class _SideNavShell extends StatelessWidget {
     return AppSurface(
       variant: AppSurfaceVariant.glass,
       glassDensity: AppSurfaceGlassDensity.low,
-      radius: 24,
-      padding: EdgeInsets.fromLTRB(
-        collapsed ? 10 : 14,
-        16,
-        collapsed ? 10 : 14,
-        14,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SideNavBrand(collapsed: collapsed),
-          const SizedBox(height: 20),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  for (int index = 0; index < destinations.length; index++) ...[
-                    _SideNavItem(
-                      collapsed: collapsed,
-                      selected: index == selected,
-                      destination: destinations[index],
-                      onTap: () => onDestinationSelected(index),
-                    ),
-                    const SizedBox(height: 10),
+      radius: 28,
+      child: AnimatedPadding(
+        duration: _sideNavTransitionDuration,
+        curve: _sideNavTransitionCurve,
+        padding: EdgeInsets.fromLTRB(
+          collapsed ? 8 : 12,
+          12,
+          collapsed ? 8 : 12,
+          12,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SideNavBrand(),
+            SizedBox(height: collapsed ? 12 : 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    for (int index = 0;
+                        index < destinations.length;
+                        index++) ...[
+                      _SideNavItem(
+                        collapsed: collapsed,
+                        selected: index == selected,
+                        destination: destinations[index],
+                        onTap: () => onDestinationSelected(index),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          if (onToggleCollapsed != null) ...[
-            const SizedBox(height: 8),
-            _SideNavItem(
-              collapsed: collapsed,
-              selected: false,
-              destination: DestinationDesc(
-                collapsed
-                    ? Icons.keyboard_double_arrow_right_rounded
-                    : Icons.keyboard_double_arrow_left_rounded,
-                collapsed ? '展开侧栏' : '收起侧栏',
-                '',
+            if (onToggleCollapsed != null) ...[
+              const SizedBox(height: 8),
+              _SideNavItem(
+                collapsed: true,
+                selected: false,
+                destination: DestinationDesc(
+                  collapsed
+                      ? Icons.keyboard_double_arrow_right_rounded
+                      : Icons.keyboard_double_arrow_left_rounded,
+                  collapsed ? '展开侧栏' : '收起侧栏',
+                  '',
+                ),
+                onTap: () => onToggleCollapsed!(!collapsed),
               ),
-              onTap: () => onToggleCollapsed!(!collapsed),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
 class _SideNavBrand extends StatelessWidget {
-  const _SideNavBrand({required this.collapsed});
-
-  final bool collapsed;
+  const _SideNavBrand();
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final accents = context.accents;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final showLabel = !collapsed && constraints.maxWidth >= 132;
         return Container(
-          height: 60,
+          height: 56,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.white.withValues(alpha: 0.04),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: 0.1),
+                accents.accent.withValues(alpha: 0.08),
+              ],
+            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: accents.accentGlow.withValues(alpha: 0.16),
+                blurRadius: 22,
+                spreadRadius: -8,
+              ),
+            ],
           ),
           child: Row(
-            mainAxisAlignment:
-                showLabel ? MainAxisAlignment.start : MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (showLabel) const SizedBox(width: 12),
               Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: scheme.primary.withValues(alpha: 0.18),
-                ),
-                child: Icon(Symbols.graphic_eq, color: scheme.onSurface),
-              ),
-              if (showLabel) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Coriander',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: scheme.onSurface,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        'Local Music',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: scheme.onSurface.withValues(alpha: 0.58),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      accents.accent.withValues(alpha: 0.24),
+                      Colors.white.withValues(alpha: 0.08),
                     ],
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accents.accentGlow.withValues(alpha: 0.28),
+                      blurRadius: 18,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-              ],
+                child: const _MetalNavIcon(
+                  icon: Symbols.graphic_eq,
+                  selected: true,
+                  size: 23,
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _MetalNavIcon extends StatelessWidget {
+  const _MetalNavIcon({
+    required this.icon,
+    required this.selected,
+    this.size = 24,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accents = context.accents;
+    final glowSize = size + 24;
+    return SizedBox(
+      width: glowSize,
+      height: glowSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedOpacity(
+            opacity: selected ? 1 : 0,
+            duration: context.motion.controlTransitionDuration,
+            curve: context.motion.normal,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    accents.accentGlow.withValues(alpha: 0.42),
+                    accents.accent.withValues(alpha: 0.18),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: SizedBox.square(dimension: glowSize),
+            ),
+          ),
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) {
+              return LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: selected
+                    ? [
+                        Colors.white,
+                        accents.accent,
+                        Color.lerp(accents.accent, Colors.white, 0.45)!,
+                      ]
+                    : [
+                        scheme.onSurface.withValues(alpha: 0.78),
+                        scheme.onSurface.withValues(alpha: 0.56),
+                      ],
+              ).createShader(bounds);
+            },
+            child: Icon(icon, size: size, color: Colors.white),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -269,30 +340,49 @@ class _SideNavItemState extends State<_SideNavItem> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final accents = context.accents;
-    final motion = context.motion;
     final highlight = widget.selected
-        ? accents.selectionTint.withValues(alpha: 0.9)
+        ? accents.selectionTint
         : (_hovered || _focused)
-            ? Colors.white.withValues(alpha: 0.045)
+            ? Colors.white.withValues(alpha: 0.055)
             : Colors.transparent;
 
     final tile = MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
-        duration: motion.navCollapseDuration,
-        curve: motion.emphasized,
-        height: 56,
+        duration: _sideNavTransitionDuration,
+        curve: _sideNavTransitionCurve,
+        height: 58,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           color: highlight,
+          gradient: widget.selected
+              ? LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    accents.accent.withValues(alpha: 0.2),
+                    accents.accent.withValues(alpha: 0.1),
+                    Colors.white.withValues(alpha: 0.02),
+                  ],
+                )
+              : null,
           border: Border.all(
             color: widget.selected
-                ? accents.accent.withValues(alpha: 0.14)
+                ? accents.accent.withValues(alpha: 0.28)
                 : _focused
                     ? accents.accentFocusRing.withValues(alpha: 0.28)
                     : Colors.transparent,
           ),
+          boxShadow: widget.selected
+              ? [
+                  BoxShadow(
+                    color: accents.accentGlow.withValues(alpha: 0.26),
+                    blurRadius: 26,
+                    spreadRadius: -6,
+                  ),
+                ]
+              : null,
         ),
         child: Material(
           type: MaterialType.transparency,
@@ -302,68 +392,51 @@ class _SideNavItemState extends State<_SideNavItem> {
               setState(() => _focused = value);
             },
             child: InkWell(
+              enableFeedback: false,
               borderRadius: BorderRadius.circular(20),
               onTap: widget.onTap,
               child: Stack(
                 children: [
                   AnimatedPositioned(
-                    duration: motion.navCollapseDuration,
-                    curve: motion.emphasized,
+                    duration: _sideNavTransitionDuration,
+                    curve: _sideNavTransitionCurve,
                     left: 0,
                     top: widget.selected ? 16 : 28,
                     child: AnimatedContainer(
                       key: widget.selected
                           ? const ValueKey('side-nav-active-indicator')
                           : null,
-                      duration: motion.navCollapseDuration,
-                      curve: motion.emphasized,
+                      duration: _sideNavTransitionDuration,
+                      curve: _sideNavTransitionCurve,
                       width: 4,
                       height: widget.selected ? 24 : 0,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(999),
-                        color: accents.accent,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.92),
+                            accents.accent.withValues(alpha: 0.95),
+                            accents.accent.withValues(alpha: 0.75),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accents.accentGlow.withValues(alpha: 0.5),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   Positioned.fill(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final showLabel =
-                            !widget.collapsed && constraints.maxWidth >= 104;
-                        return Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: showLabel ? 14 : 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: showLabel
-                                ? MainAxisAlignment.start
-                                : MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                widget.destination.icon,
-                                color: scheme.onSurface,
-                              ),
-                              if (showLabel) ...[
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    widget.destination.label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: scheme.onSurface,
-                                      fontSize: 15,
-                                      fontWeight: widget.selected
-                                          ? FontWeight.w700
-                                          : FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      },
+                    child: _SideNavItemContent(
+                      collapsed: widget.collapsed,
+                      selected: widget.selected,
+                      icon: widget.destination.icon,
+                      label: widget.destination.label,
+                      textColor: scheme.onSurface,
                     ),
                   ),
                 ],
@@ -376,5 +449,84 @@ class _SideNavItemState extends State<_SideNavItem> {
 
     if (!widget.collapsed) return tile;
     return Tooltip(message: widget.destination.label, child: tile);
+  }
+}
+
+class _SideNavItemContent extends StatelessWidget {
+  const _SideNavItemContent({
+    required this.collapsed,
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.textColor,
+  });
+
+  final bool collapsed;
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: collapsed ? 0 : 1),
+      duration: _sideNavTransitionDuration,
+      curve: _sideNavTransitionCurve,
+      builder: (context, progress, _) {
+        final resolvedProgress = Curves.easeOutCubic.transform(progress);
+        final horizontalPadding = lerpDouble(8, 14, progress) ?? 14;
+        final labelSlide = 10 * (1 - resolvedProgress);
+
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Align(
+                alignment: Alignment.lerp(
+                      Alignment.center,
+                      Alignment.centerLeft,
+                      resolvedProgress,
+                    ) ??
+                    Alignment.centerLeft,
+                child: _MetalNavIcon(
+                  icon: icon,
+                  selected: selected,
+                ),
+              ),
+              IgnorePointer(
+                ignoring: resolvedProgress < 0.98,
+                child: ClipRect(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 42),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Transform.translate(
+                        offset: Offset(labelSlide, 0),
+                        child: Opacity(
+                          opacity: resolvedProgress,
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 15,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

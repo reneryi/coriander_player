@@ -1,4 +1,6 @@
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+﻿import 'dart:ui';
+
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 
 enum CpButtonVariant { primary, secondary, outline, ghost, destructive }
@@ -230,24 +232,32 @@ class CpSurface extends StatelessWidget {
           CpSurfaceTone.subtle => surfaces.radiusLg,
           CpSurfaceTone.floating => surfaces.radiusXxl,
         };
-    final color = switch (tone) {
-      CpSurfaceTone.panel => scheme.surfaceContainer.withValues(alpha: 0.72),
-      CpSurfaceTone.card =>
-        scheme.surfaceContainerHighest.withValues(alpha: 0.58),
-      CpSurfaceTone.subtle =>
-        scheme.surfaceContainerLow.withValues(alpha: 0.42),
-      CpSurfaceTone.floating =>
-        scheme.surfaceContainerHighest.withValues(alpha: 0.78),
+    final isDark = scheme.brightness == Brightness.dark;
+    final baseColor = switch (tone) {
+      CpSurfaceTone.panel => scheme.surfaceContainer,
+      CpSurfaceTone.card => scheme.surfaceContainerHighest,
+      CpSurfaceTone.subtle => scheme.surfaceContainerLow,
+      CpSurfaceTone.floating => scheme.surfaceContainerHighest,
     };
+    final color = Color.alphaBlend(
+      scheme.primary.withValues(alpha: isDark ? 0.12 : 0.04),
+      baseColor.withValues(alpha: _toneOpacity(isDark)),
+    );
     final shadow = tone == CpSurfaceTone.floating
         ? [
             BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.14),
-              blurRadius: 28,
-              offset: const Offset(0, 12),
+              color: scheme.shadow.withValues(alpha: isDark ? 0.2 : 0.12),
+              blurRadius: 34,
+              offset: const Offset(0, 14),
+            ),
+            BoxShadow(
+              color: scheme.primary.withValues(alpha: 0.08),
+              blurRadius: 30,
+              spreadRadius: -8,
             ),
           ]
         : const <BoxShadow>[];
+    final applyBlur = surfaces.backdropStrategy != AppBackdropStrategy.solid;
 
     final content = AnimatedContainer(
       duration: motion.panelTransitionDuration,
@@ -255,10 +265,25 @@ class CpSurface extends StatelessWidget {
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        color: color,
         borderRadius: BorderRadius.circular(resolvedRadius),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(
+              Colors.white.withValues(alpha: isDark ? 0.08 : 0.46),
+              color,
+            ),
+            Color.alphaBlend(
+              scheme.primary.withValues(alpha: isDark ? 0.08 : 0.04),
+              color.withValues(alpha: isDark ? 0.78 : 0.68),
+            ),
+          ],
+        ),
         border: border
-            ? Border.all(color: scheme.outlineVariant.withValues(alpha: 0.28))
+            ? Border.all(
+                color: Colors.white.withValues(alpha: isDark ? 0.14 : 0.5),
+              )
             : null,
         boxShadow: shadow,
       ),
@@ -271,8 +296,34 @@ class CpSurface extends StatelessWidget {
     if (!clip) return content;
     return ClipRRect(
       borderRadius: BorderRadius.circular(resolvedRadius),
-      child: content,
+      child: applyBlur
+          ? BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: surfaces.glassSigma * _toneSigmaScale(),
+                sigmaY: surfaces.glassSigma * _toneSigmaScale(),
+              ),
+              child: content,
+            )
+          : content,
     );
+  }
+
+  double _toneOpacity(bool isDark) {
+    return switch (tone) {
+      CpSurfaceTone.panel => isDark ? 0.34 : 0.36,
+      CpSurfaceTone.card => isDark ? 0.3 : 0.32,
+      CpSurfaceTone.subtle => isDark ? 0.22 : 0.24,
+      CpSurfaceTone.floating => isDark ? 0.36 : 0.44,
+    };
+  }
+
+  double _toneSigmaScale() {
+    return switch (tone) {
+      CpSurfaceTone.panel => 0.86,
+      CpSurfaceTone.card => 0.78,
+      CpSurfaceTone.subtle => 0.62,
+      CpSurfaceTone.floating => 1.0,
+    };
   }
 }
 
@@ -363,6 +414,7 @@ class CpIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final button = IconButton(
       onPressed: onPressed,
+      enableFeedback: false,
       icon: icon,
       style: _iconButtonStyle(context),
       visualDensity: small ? VisualDensity.compact : VisualDensity.standard,
@@ -373,26 +425,37 @@ class CpIconButton extends StatelessWidget {
 
   ButtonStyle? _iconButtonStyle(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final surfaces = context.surfaces;
+    final glassShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(surfaces.radiusXxl),
+    );
     return switch (variant) {
       CpButtonVariant.primary => IconButton.styleFrom(
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
+          shape: glassShape,
         ),
       CpButtonVariant.secondary => IconButton.styleFrom(
-          backgroundColor: scheme.secondaryContainer.withValues(alpha: 0.72),
+          backgroundColor: Colors.white.withValues(alpha: 0.1),
           foregroundColor: scheme.onSecondaryContainer,
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+          shape: glassShape,
         ),
       CpButtonVariant.outline => IconButton.styleFrom(
           side:
               BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
+          shape: glassShape,
         ),
       CpButtonVariant.ghost => IconButton.styleFrom(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white.withValues(alpha: 0.075),
           foregroundColor: scheme.onSurface,
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          shape: glassShape,
         ),
       CpButtonVariant.destructive => IconButton.styleFrom(
           backgroundColor: scheme.errorContainer,
           foregroundColor: scheme.onErrorContainer,
+          shape: glassShape,
         ),
     };
   }

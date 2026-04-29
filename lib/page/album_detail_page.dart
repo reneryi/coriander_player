@@ -1,12 +1,13 @@
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/component/album_artwork_hero.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/component/audio_tile.dart';
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/page/uni_detail_page.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/page/uni_page_components.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/component/album_artwork_hero.dart';
+import 'package:qisheng_player/component/cp/cp_components.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/component/audio_tile.dart';
+import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/page/uni_detail_page.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/page/uni_page_components.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -37,7 +38,7 @@ class AlbumDetailPage extends StatelessWidget {
       backgroundPic: album.works.first.cover,
       picShape: PicShape.rrect,
       title: album.name,
-      subtitle: "${album.works.length} 首作品",
+      subtitle: "${album.works.length} 首作哀",
       secondaryContent: secondaryContent,
       secondaryContentBuilder: (context, audio, i, multiSelectController) =>
           AudioTile(
@@ -53,10 +54,9 @@ class AlbumDetailPage extends StatelessWidget {
       tertiaryContentTitle: "艺术家",
       tertiaryContent: album.artistsMap.values.toList(),
       tertiaryContentBuilder: (context, artist, i, multiSelectController) =>
-          ListTile(
+          CpListTile(
         onTap: () => context.push(app_paths.ARTIST_DETAIL_PAGE, extra: artist),
         title: Text(artist.name),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       ),
       enableShufflePlay: true,
       enableSortMethod: true,
@@ -84,7 +84,7 @@ class AlbumDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.title.localeCompareTo(b.title));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.title.localeCompareTo(a.title));
                 break;
             }
@@ -98,7 +98,7 @@ class AlbumDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.artist.localeCompareTo(b.artist));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.artist.localeCompareTo(a.artist));
                 break;
             }
@@ -112,7 +112,7 @@ class AlbumDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort(compareByDiscTrack);
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => compareByDiscTrack(b, a));
                 break;
             }
@@ -126,7 +126,7 @@ class AlbumDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.created.compareTo(b.created));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.created.compareTo(a.created));
                 break;
             }
@@ -140,7 +140,7 @@ class AlbumDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.modified.compareTo(b.modified));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.modified.compareTo(a.modified));
                 break;
             }

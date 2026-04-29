@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/src/bass/bass_player.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/navigation_state.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/src/bass/bass_player.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -25,6 +25,7 @@ enum HotkeyAction {
   toggleDesktopLyric("显示/隐藏桌面歌词", "toggleDesktopLyric"),
   toggleMainWindow("显示/隐藏主界面", "toggleMainWindow"),
   goBack("返回上一页", "goBack"),
+  goForward("前进", "goForward"),
   quit("退出程序", "quit");
 
   const HotkeyAction(this.label, this.prefKey);
@@ -42,13 +43,13 @@ class HotkeysHelper {
     HotkeyAction.toggleMainWindow,
   };
 
-  /// 鼠标侧键的 USB HID 用途 ID
+  /// 鼠标侧键的 USB HID 用途 ID。
   static final int _browserBackKeyId =
       PhysicalKeyboardKey.browserBack.usbHidUsage;
   static final int _browserForwardKeyId =
       PhysicalKeyboardKey.browserForward.usbHidUsage;
 
-  /// 判断绑定是否为鼠标侧键（无法通过系统级热键 API 注册）
+  /// 判断绑定是否为鼠标侧键（无法通过系统级热键 API 注册）。
   static bool isMouseButtonBinding(HotkeyBindingPreference binding) {
     return binding.keyId == _browserBackKeyId ||
         binding.keyId == _browserForwardKeyId;
@@ -112,13 +113,12 @@ class HotkeysHelper {
     HotkeyAction.goBack: (_) {
       final routerContext = ROUTER_KEY.currentContext;
       if (routerContext == null) return;
-
-      final navigator = Navigator.maybeOf(routerContext);
-      if (navigator?.canPop() == true) {
-        navigator?.pop();
-      } else if (ROUTER_KEY.currentContext?.canPop() == true) {
-        ROUTER_KEY.currentContext?.pop();
-      }
+      AppNavigationState.instance.navigateBack(routerContext, fallback: '');
+    },
+    HotkeyAction.goForward: (_) {
+      final routerContext = ROUTER_KEY.currentContext;
+      if (routerContext == null) return;
+      AppNavigationState.instance.navigateForward(routerContext);
     },
     HotkeyAction.quit: (_) async {
       await Future.wait([
@@ -138,14 +138,14 @@ class HotkeysHelper {
   static HotkeyBindingPreference getDefaultBinding(HotkeyAction action) =>
       HotkeyPreference.defaults().bindings[action.prefKey]!;
 
-  /// 鼠标侧键 USB HID ID → 友好显示名称映射
+  /// 鼠标侧键 USB HID ID ↀ友好显示名称映射
   static final Map<int, String> _mouseButtonLabels = {
     PhysicalKeyboardKey.browserBack.usbHidUsage: "鼠标侧键后退",
     PhysicalKeyboardKey.browserForward.usbHidUsage: "鼠标侧键前进",
   };
 
   static String describeBinding(HotkeyBindingPreference binding) {
-    // 优先检查是否为鼠标侧键
+    // 优先检查是否为鼠标侧键。
     final mouseLabel = _mouseButtonLabels[binding.keyId];
     if (mouseLabel != null && binding.modifiers.isEmpty) {
       return mouseLabel;
@@ -170,7 +170,7 @@ class HotkeysHelper {
           break;
       }
     }
-    // 鼠标侧键带修饰符的情况也用友好名称
+    // 鼠标侧键带修饰符的情况也使用友好名称。
     final label = mouseLabel ?? key.debugName ?? key.keyLabel;
     buffer.add(
         (label == " ") ? "Space" : (label.isEmpty ? key.toString() : label));
@@ -216,7 +216,7 @@ class HotkeysHelper {
     for (final action in HotkeyAction.values) {
       if (!registerActions.contains(action)) continue;
       final binding = getBinding(action);
-      // 鼠标侧键无法通过系统级热键 API 注册，跳过
+      // 鼠标侧键无法通过系统级热键 API 注册，跳过。
       if (isMouseButtonBinding(binding)) continue;
       final hotkey = _toHotKey(binding);
       if (hotkey == null) continue;
@@ -228,7 +228,7 @@ class HotkeysHelper {
         _registeredHotKeys[action] = hotkey;
       } catch (err, trace) {
         LOGGER.e(
-          "注册快捷键失败: ${action.label}",
+          "注册快捷键失败：${action.label}",
           error: err,
           stackTrace: trace,
         );
@@ -277,11 +277,10 @@ class HotkeysHelper {
   }
 
   static Future<void> _applyCurrentMode() async {
-    final targetMode = _inputFocused
-        ? _HotkeyRegisterMode.none
-        : (_windowFocused
-            ? _HotkeyRegisterMode.foreground
-            : _HotkeyRegisterMode.background);
+    final targetMode = _resolveRegisterMode(
+      windowFocused: _windowFocused,
+      inputFocused: _inputFocused,
+    );
     if (_currentMode == targetMode) return;
 
     switch (targetMode) {
@@ -322,7 +321,8 @@ class HotkeysHelper {
 
   /// 处理鼠标侧键事件（从 Listener widget 调用）
   static void handlePointerDown(PointerDownEvent event) {
-    // 鼠标侧键后退 = button 3, 前进 = button 4
+    if (_inputFocused) return;
+    // 榧犳爣渚ч敭鍚庨€€ = button 3, 鍓嶈繘 = button 4
     final int button = event.buttons;
     int? matchKeyId;
     if (button == kBackMouseButton) {
@@ -332,7 +332,7 @@ class HotkeysHelper {
     }
     if (matchKeyId == null) return;
 
-    // 遍历所有绑定，找到匹配的 action 并执行
+    // 閬嶅巻鎵€鏈夌粦瀹氾紝鎵惧埌鍖归厤鐨?action 骞舵墽琛?
     for (final action in HotkeyAction.values) {
       final binding = getBinding(action);
       if (binding.keyId == matchKeyId && binding.modifiers.isEmpty) {
@@ -352,6 +352,27 @@ class HotkeysHelper {
   static Future<void> onFocusChanges(bool focus) async {
     _inputFocused = focus;
     await _applyCurrentMode();
+  }
+
+  static _HotkeyRegisterMode _resolveRegisterMode({
+    required bool windowFocused,
+    required bool inputFocused,
+  }) {
+    if (inputFocused) return _HotkeyRegisterMode.none;
+    return windowFocused
+        ? _HotkeyRegisterMode.foreground
+        : _HotkeyRegisterMode.background;
+  }
+
+  @visibleForTesting
+  static String resolveRegisterModeName({
+    required bool windowFocused,
+    required bool inputFocused,
+  }) {
+    return _resolveRegisterMode(
+      windowFocused: windowFocused,
+      inputFocused: inputFocused,
+    ).name;
   }
 }
 

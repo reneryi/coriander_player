@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cwchar>
+#include <sstream>
 #include <commctrl.h>
 #include <dwmapi.h>
 #include <tlhelp32.h>
@@ -22,12 +23,23 @@ namespace {
 #define DWMWA_SYSTEMBACKDROP_TYPE 38
 #endif
 
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+#endif
+
 #ifndef DWMSBT_AUTO
 #define DWMSBT_AUTO 0
 #define DWMSBT_NONE 1
 #define DWMSBT_MAINWINDOW 2
 #define DWMSBT_TRANSIENTWINDOW 3
 #define DWMSBT_TABBEDWINDOW 4
+#endif
+
+#ifndef DWMWCP_DEFAULT
+#define DWMWCP_DEFAULT 0
+#define DWMWCP_DONOTROUND 1
+#define DWMWCP_ROUND 2
+#define DWMWCP_ROUNDSMALL 3
 #endif
 
 struct WindowSearchData {
@@ -81,6 +93,240 @@ bool WasWindowMaximized(HWND hwnd) {
   return IsZoomed(hwnd) != FALSE;
 }
 
+bool CanNativeResize(HWND hwnd) {
+  if (hwnd == nullptr || IsZoomed(hwnd) != FALSE || IsIconic(hwnd) != FALSE) {
+    return false;
+  }
+  const auto style = GetWindowLongPtr(hwnd, GWL_STYLE);
+  return (style & WS_THICKFRAME) != 0;
+}
+
+int NativeResizeBorderThickness(HWND hwnd) {
+  UINT dpi = USER_DEFAULT_SCREEN_DPI;
+  if (hwnd != nullptr) {
+    dpi = GetDpiForWindow(hwnd);
+    if (dpi == 0) {
+      dpi = USER_DEFAULT_SCREEN_DPI;
+    }
+  }
+  return std::max(1, MulDiv(8, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
+}
+
+LRESULT NativeWindowHitTest(HWND hwnd, LPARAM lparam) {
+  if (!CanNativeResize(hwnd)) {
+    return HTCLIENT;
+  }
+
+  RECT rect = {};
+  if (GetWindowRect(hwnd, &rect) == FALSE) {
+    return HTCLIENT;
+  }
+
+  const POINT cursor = {
+      static_cast<LONG>(static_cast<short>(LOWORD(lparam))),
+      static_cast<LONG>(static_cast<short>(HIWORD(lparam))),
+  };
+  const int border = NativeResizeBorderThickness(hwnd);
+  const bool on_left = cursor.x >= rect.left && cursor.x < rect.left + border;
+  const bool on_right = cursor.x < rect.right && cursor.x >= rect.right - border;
+  const bool on_top = cursor.y >= rect.top && cursor.y < rect.top + border;
+  const bool on_bottom = cursor.y < rect.bottom && cursor.y >= rect.bottom - border;
+
+  if (on_top && on_left) {
+    return HTTOPLEFT;
+  }
+  if (on_top && on_right) {
+    return HTTOPRIGHT;
+  }
+  if (on_bottom && on_left) {
+    return HTBOTTOMLEFT;
+  }
+  if (on_bottom && on_right) {
+    return HTBOTTOMRIGHT;
+  }
+  if (on_left) {
+    return HTLEFT;
+  }
+  if (on_right) {
+    return HTRIGHT;
+  }
+  if (on_top) {
+    return HTTOP;
+  }
+  if (on_bottom) {
+    return HTBOTTOM;
+  }
+  return HTCLIENT;
+}
+
+LPCTSTR CursorForHitTest(WORD hit_test) {
+  switch (hit_test) {
+    case HTLEFT:
+    case HTRIGHT:
+      return IDC_SIZEWE;
+    case HTTOP:
+    case HTBOTTOM:
+      return IDC_SIZENS;
+    case HTTOPLEFT:
+    case HTBOTTOMRIGHT:
+      return IDC_SIZENWSE;
+    case HTTOPRIGHT:
+    case HTBOTTOMLEFT:
+      return IDC_SIZENESW;
+    default:
+      return IDC_ARROW;
+  }
+}
+
+bool IsResizeHitTest(WORD hit_test) {
+  switch (hit_test) {
+    case HTLEFT:
+    case HTRIGHT:
+    case HTTOP:
+    case HTBOTTOM:
+    case HTTOPLEFT:
+    case HTTOPRIGHT:
+    case HTBOTTOMLEFT:
+    case HTBOTTOMRIGHT:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool IsEffectivelyFullscreen(HWND hwnd) {
+  if (hwnd == nullptr) {
+    return false;
+  }
+
+  RECT window_rect = {};
+  if (GetWindowRect(hwnd, &window_rect) == FALSE) {
+    return false;
+  }
+
+  MONITORINFO monitor_info = {};
+  monitor_info.cbSize = sizeof(MONITORINFO);
+  const HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+  if (monitor == nullptr ||
+      GetMonitorInfo(monitor, &monitor_info) == FALSE) {
+    return false;
+  }
+
+  const RECT monitor_rect = monitor_info.rcMonitor;
+  return std::abs(window_rect.left - monitor_rect.left) <= 1 &&
+         std::abs(window_rect.top - monitor_rect.top) <= 1 &&
+         std::abs(window_rect.right - monitor_rect.right) <= 1 &&
+         std::abs(window_rect.bottom - monitor_rect.bottom) <= 1;
+}
+
+bool ShouldRoundMainWindow(HWND hwnd) {
+  return hwnd != nullptr &&
+         IsIconic(hwnd) == FALSE &&
+         IsZoomed(hwnd) == FALSE &&
+         !IsEffectivelyFullscreen(hwnd);
+}
+
+int WindowCornerRadiusPx(HWND hwnd) {
+  UINT dpi = USER_DEFAULT_SCREEN_DPI;
+  if (hwnd != nullptr) {
+    dpi = GetDpiForWindow(hwnd);
+    if (dpi == 0) {
+      dpi = USER_DEFAULT_SCREEN_DPI;
+    }
+  }
+  return std::max(12, MulDiv(18, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
+}
+
+bool HandleNativeSetCursor(HWND hwnd, WPARAM wparam, LPARAM lparam) {
+  const auto target = reinterpret_cast<HWND>(wparam);
+  if (target != hwnd) {
+    return false;
+  }
+
+  const WORD hit_test = LOWORD(lparam);
+  if (IsResizeHitTest(hit_test) || hit_test == HTCLIENT ||
+      hit_test == HTERROR || hit_test == HTNOWHERE) {
+    SetCursor(LoadCursor(nullptr, CursorForHitTest(hit_test)));
+    return true;
+  }
+  return false;
+}
+
+bool StartCaptionDragWithoutSystemFeedback(HWND hwnd) {
+  if (hwnd == nullptr) {
+    return false;
+  }
+
+  if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) {
+    return false;
+  }
+
+  POINT cursor = {};
+  if (GetCursorPos(&cursor) == FALSE) {
+    return false;
+  }
+
+  ReleaseCapture();
+  return PostMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION,
+                     MAKELPARAM(cursor.x, cursor.y)) != FALSE;
+}
+
+std::optional<LONG> ResizeEdgeHitTestFromName(const std::string& resize_edge) {
+  if (resize_edge == "top") {
+    return HTTOP;
+  }
+  if (resize_edge == "bottom") {
+    return HTBOTTOM;
+  }
+  if (resize_edge == "left") {
+    return HTLEFT;
+  }
+  if (resize_edge == "right") {
+    return HTRIGHT;
+  }
+  if (resize_edge == "topLeft") {
+    return HTTOPLEFT;
+  }
+  if (resize_edge == "topRight") {
+    return HTTOPRIGHT;
+  }
+  if (resize_edge == "bottomLeft") {
+    return HTBOTTOMLEFT;
+  }
+  if (resize_edge == "bottomRight") {
+    return HTBOTTOMRIGHT;
+  }
+  return std::nullopt;
+}
+
+bool StartResizeWithoutSystemFeedback(HWND hwnd, const std::string& resize_edge) {
+  if (hwnd == nullptr) {
+    return false;
+  }
+
+  const auto hit_test = ResizeEdgeHitTestFromName(resize_edge);
+  if (!hit_test.has_value()) {
+    return false;
+  }
+
+  if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) {
+    return false;
+  }
+
+  POINT cursor = {};
+  if (GetCursorPos(&cursor) == FALSE) {
+    return false;
+  }
+
+  ReleaseCapture();
+  return PostMessage(hwnd, WM_NCLBUTTONDOWN, *hit_test,
+                     MAKELPARAM(cursor.x, cursor.y)) != FALSE;
+}
+
+bool IsAltKeyMessage(WPARAM wparam) {
+  return wparam == VK_MENU || wparam == VK_LMENU || wparam == VK_RMENU;
+}
+
 BOOL CALLBACK EnumDesktopLyricWindowByPidProc(HWND hwnd, LPARAM lparam) {
   auto* data = reinterpret_cast<WindowSearchData*>(lparam);
   if (data == nullptr || data->process_id == 0) {
@@ -110,6 +356,23 @@ BOOL CALLBACK EnumDesktopLyricWindowByPidProc(HWND hwnd, LPARAM lparam) {
 
 struct TitleSearchData {
   HWND hwnd = nullptr;
+};
+
+struct BackdropSupportInfo {
+  bool native_supported = false;
+  bool mica_supported = false;
+  bool acrylic_supported = false;
+  std::string auto_mode = "none";
+  std::string fallback_reason = "unsupported_platform";
+};
+
+struct BackdropResolution {
+  std::string requested_mode = "auto";
+  std::string applied_mode = "none";
+  bool native_backdrop_supported = false;
+  bool native_apply_succeeded = false;
+  std::string fallback_reason = "";
+  int backdrop_type = DWMSBT_NONE;
 };
 
 BOOL CALLBACK EnumDesktopLyricWindowByTitleProc(HWND hwnd, LPARAM lparam) {
@@ -162,6 +425,111 @@ int BackdropTypeFromMode(const std::string& mode) {
   }
   return DWMSBT_AUTO;
 }
+
+std::optional<DWORD> GetWindowsBuildNumber() {
+  using RtlGetVersionFn = LONG(WINAPI*)(PRTL_OSVERSIONINFOW);
+  const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+  if (ntdll == nullptr) {
+    return std::nullopt;
+  }
+  const auto rtl_get_version = reinterpret_cast<RtlGetVersionFn>(
+      GetProcAddress(ntdll, "RtlGetVersion"));
+  if (rtl_get_version == nullptr) {
+    return std::nullopt;
+  }
+
+  RTL_OSVERSIONINFOW version_info = {};
+  version_info.dwOSVersionInfoSize = sizeof(version_info);
+  if (rtl_get_version(&version_info) != 0) {
+    return std::nullopt;
+  }
+  return version_info.dwBuildNumber;
+}
+
+BackdropSupportInfo ResolveBackdropSupportInfo() {
+  const auto build_number = GetWindowsBuildNumber();
+  if (!build_number.has_value()) {
+    return {};
+  }
+  if (*build_number >= 22621) {
+    return {
+        true,
+        true,
+        true,
+        "mica",
+        "",
+    };
+  }
+  if (*build_number >= 22000) {
+    return {
+        true,
+        true,
+        false,
+        "mica",
+        "acrylic_requires_windows_11_22h2",
+    };
+  }
+  return {
+      false,
+      false,
+      false,
+      "none",
+      "system_backdrop_requires_windows_11",
+  };
+}
+
+BackdropResolution ResolveBackdropRequest(const std::string& requested_mode) {
+  BackdropResolution resolution = {};
+  resolution.requested_mode = NormalizeBackdropMode(requested_mode);
+
+  const BackdropSupportInfo support = ResolveBackdropSupportInfo();
+  resolution.native_backdrop_supported = support.native_supported;
+
+  std::string target_mode = resolution.requested_mode;
+  if (resolution.requested_mode == "auto") {
+    target_mode = support.auto_mode;
+  }
+
+  if (target_mode == "mica" && !support.mica_supported) {
+    resolution.applied_mode = "none";
+    resolution.fallback_reason = support.fallback_reason.empty()
+                                     ? "mica_not_supported"
+                                     : support.fallback_reason;
+    return resolution;
+  }
+
+  if (target_mode == "acrylic" && !support.acrylic_supported) {
+    resolution.applied_mode = support.mica_supported ? "mica" : "none";
+    resolution.fallback_reason = support.fallback_reason.empty()
+                                     ? "acrylic_not_supported"
+                                     : support.fallback_reason;
+    resolution.backdrop_type = BackdropTypeFromMode(resolution.applied_mode);
+    return resolution;
+  }
+
+  resolution.applied_mode = target_mode;
+  resolution.backdrop_type = BackdropTypeFromMode(target_mode);
+  if (!support.native_supported) {
+    resolution.fallback_reason = support.fallback_reason;
+  }
+  return resolution;
+}
+
+flutter::EncodableMap EncodeBackdropResolution(
+    const BackdropResolution& resolution) {
+  flutter::EncodableMap map;
+  map[flutter::EncodableValue("requestedMode")] =
+      flutter::EncodableValue(resolution.requested_mode);
+  map[flutter::EncodableValue("appliedMode")] =
+      flutter::EncodableValue(resolution.applied_mode);
+  map[flutter::EncodableValue("nativeBackdropSupported")] =
+      flutter::EncodableValue(resolution.native_backdrop_supported);
+  map[flutter::EncodableValue("nativeApplySucceeded")] =
+      flutter::EncodableValue(resolution.native_apply_succeeded);
+  map[flutter::EncodableValue("fallbackReason")] =
+      flutter::EncodableValue(resolution.fallback_reason);
+  return map;
+}
 }  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -169,7 +537,7 @@ FlutterWindow::FlutterWindow(const flutter::DartProject& project)
   taskbar_button_created_message_ =
       RegisterWindowMessage(L"TaskbarButtonCreated");
   activate_window_message_ =
-      RegisterWindowMessage(L"CorianderPlayerActivateMainWindow");
+      RegisterWindowMessage(L"QishengPlayerActivateMainWindow");
 }
 
 FlutterWindow::~FlutterWindow() {}
@@ -195,7 +563,7 @@ bool FlutterWindow::OnCreate() {
   media_control_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           flutter_controller_->engine()->messenger(),
-          "coriander_player/window_controls",
+          "qisheng_player/window_controls",
           &flutter::StandardMethodCodec::GetInstance());
   media_control_channel_->SetMethodCallHandler(
       [this](const flutter::MethodCall<flutter::EncodableValue>& method_call,
@@ -224,6 +592,24 @@ bool FlutterWindow::OnCreate() {
           is_playing_ = is_playing;
           SetupTaskbarButtons();
           result->Success();
+          return;
+        }
+
+        if (method_call.method_name() == "start_dragging") {
+          result->Success(flutter::EncodableValue(
+              StartCaptionDragWithoutSystemFeedback(GetHandle())));
+          return;
+        }
+
+        if (method_call.method_name() == "start_resizing") {
+          const auto* map = method_call.arguments() == nullptr
+                                ? nullptr
+                                : std::get_if<flutter::EncodableMap>(
+                                      method_call.arguments());
+          const auto resize_edge =
+              GetStringArg(map, "resizeEdge", std::string());
+          result->Success(flutter::EncodableValue(
+              StartResizeWithoutSystemFeedback(GetHandle(), resize_edge)));
           return;
         }
 
@@ -308,6 +694,7 @@ bool FlutterWindow::OnCreate() {
   // registered. The following call ensures a frame is pending to ensure the
   // window is shown. It is a no-op if the first frame hasn't completed yet.
   flutter_controller_->ForceRedraw();
+  ApplyRoundedWindowAppearance();
 
   return true;
 }
@@ -359,6 +746,20 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   switch (message) {
+    case WM_NCCALCSIZE:
+      return 0;
+    case WM_NCHITTEST:
+      return NativeWindowHitTest(hwnd, lparam);
+    case WM_SIZE:
+    case WM_DPICHANGED:
+    case WM_WINDOWPOSCHANGED:
+      ApplyRoundedWindowAppearance();
+      break;
+    case WM_SETCURSOR:
+      if (HandleNativeSetCursor(hwnd, wparam, lparam)) {
+        return TRUE;
+      }
+      break;
     case kRefreshThumbButtonsMessage:
       SetupTaskbarButtons();
       return 0;
@@ -367,7 +768,18 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
         MinimizeToTray();
         return 0;
       }
+      if ((wparam & 0xFFF0) == SC_KEYMENU) {
+        return 0;
+      }
       break;
+    case WM_SYSKEYDOWN:
+    case WM_SYSKEYUP:
+      if (IsAltKeyMessage(wparam)) {
+        return 0;
+      }
+      break;
+    case WM_SYSCHAR:
+      return 0;
     case WM_CLOSE:
       if (!allow_close_) {
         MinimizeToTray();
@@ -440,7 +852,7 @@ void FlutterWindow::AddTrayIcon() {
   tray_icon_data_.uCallbackMessage = kTrayCallbackMessage;
   tray_icon_data_.hIcon =
       LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
-  lstrcpynW(tray_icon_data_.szTip, L"Coriander Player",
+  lstrcpynW(tray_icon_data_.szTip, L"\u6816\u58F0",
             ARRAYSIZE(tray_icon_data_.szTip));
 
   if (Shell_NotifyIcon(NIM_ADD, &tray_icon_data_)) {
@@ -524,25 +936,100 @@ std::string FlutterWindow::GetStringArg(const flutter::EncodableMap* map,
   return default_value;
 }
 
-std::string FlutterWindow::SetWindowBackdropMode(
+flutter::EncodableMap FlutterWindow::SetWindowBackdropMode(
     const std::string& requested_mode) {
-  const auto normalized_mode = NormalizeBackdropMode(requested_mode);
-  const int backdrop_type = BackdropTypeFromMode(normalized_mode);
+  auto resolution = ResolveBackdropRequest(requested_mode);
   const HWND hwnd = GetHandle();
   if (hwnd == nullptr) {
-    return "none";
+    resolution.applied_mode = "none";
+    resolution.fallback_reason = "window_handle_unavailable";
+    return EncodeBackdropResolution(resolution);
+  }
+
+  if (!resolution.native_backdrop_supported) {
+    const int fallback_type = DWMSBT_NONE;
+    DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &fallback_type,
+                          sizeof(fallback_type));
+    if (resolution.applied_mode.empty()) {
+      resolution.applied_mode = "none";
+    }
+    ApplyRoundedWindowAppearance();
+    return EncodeBackdropResolution(resolution);
   }
 
   const HRESULT apply_result = DwmSetWindowAttribute(
-      hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdrop_type, sizeof(backdrop_type));
+      hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &resolution.backdrop_type,
+      sizeof(resolution.backdrop_type));
   if (SUCCEEDED(apply_result)) {
-    return normalized_mode;
+    resolution.native_apply_succeeded = true;
+    ApplyRoundedWindowAppearance();
+    return EncodeBackdropResolution(resolution);
   }
 
   const int fallback_type = DWMSBT_NONE;
   DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &fallback_type,
                         sizeof(fallback_type));
-  return "none";
+  resolution.applied_mode = "none";
+  if (resolution.fallback_reason.empty()) {
+    std::ostringstream reason_stream;
+    reason_stream << "native_apply_failed_" << std::hex
+                  << static_cast<unsigned long>(apply_result);
+    resolution.fallback_reason = reason_stream.str();
+  }
+  ApplyRoundedWindowAppearance();
+  return EncodeBackdropResolution(resolution);
+}
+
+void FlutterWindow::ApplyRoundedWindowAppearance() {
+  const HWND hwnd = GetHandle();
+  if (hwnd == nullptr) {
+    return;
+  }
+
+  const int corner_preference =
+      ShouldRoundMainWindow(hwnd) ? DWMWCP_ROUND : DWMWCP_DONOTROUND;
+  DwmSetWindowAttribute(
+      hwnd,
+      DWMWA_WINDOW_CORNER_PREFERENCE,
+      &corner_preference,
+      sizeof(corner_preference));
+  UpdateRoundedWindowRegion();
+}
+
+void FlutterWindow::UpdateRoundedWindowRegion() {
+  const HWND hwnd = GetHandle();
+  if (hwnd == nullptr) {
+    return;
+  }
+
+  if (!ShouldRoundMainWindow(hwnd)) {
+    SetWindowRgn(hwnd, nullptr, TRUE);
+    return;
+  }
+
+  RECT window_rect = {};
+  if (GetWindowRect(hwnd, &window_rect) == FALSE) {
+    return;
+  }
+
+  const int width =
+      std::max(0, static_cast<int>(window_rect.right - window_rect.left));
+  const int height =
+      std::max(0, static_cast<int>(window_rect.bottom - window_rect.top));
+  if (width == 0 || height == 0) {
+    return;
+  }
+
+  const int radius = WindowCornerRadiusPx(hwnd);
+  HRGN region =
+      CreateRoundRectRgn(0, 0, width + 1, height + 1, radius, radius);
+  if (region == nullptr) {
+    return;
+  }
+
+  if (SetWindowRgn(hwnd, region, TRUE) == 0) {
+    DeleteObject(region);
+  }
 }
 
 HWND FlutterWindow::FindDesktopLyricWindowByPid(DWORD pid) const {

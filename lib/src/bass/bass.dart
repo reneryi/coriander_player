@@ -12,10 +12,6 @@ const int BASS_ERROR_START = 9;
 
 const int BASS_SAMPLE_FLOAT = 256;
 
-const int BASS_DATA_FFT256 = 2147483648;
-
-const int BASS_DATA_FFT512 = 2147483649;
-
 const int BASS_ERROR_POSITION = 7;
 
 const int BASS_ERROR_NOPLAY = 24;

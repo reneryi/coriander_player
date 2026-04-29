@@ -1,29 +1,26 @@
-import 'package:coriander_player/component/album_tile.dart';
-import 'package:coriander_player/component/artist_tile.dart';
-import 'package:coriander_player/component/audio_tile.dart';
-import 'package:coriander_player/hotkeys_helper.dart';
-import 'package:coriander_player/page/search_page/search_page.dart';
+﻿import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/component/album_tile.dart';
+import 'package:qisheng_player/component/artist_tile.dart';
+import 'package:qisheng_player/component/audio_tile.dart';
+import 'package:qisheng_player/page/search_page/search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:coriander_player/app_paths.dart' as app_paths;
 
-class SearchResultPage extends StatefulWidget {
-  const SearchResultPage({super.key, required this.searchResult});
+class SearchResultPage extends StatelessWidget {
+  const SearchResultPage({
+    super.key,
+    required this.initialQuery,
+    this.initialResult,
+  });
 
-  final UnionSearchResult searchResult;
+  final String initialQuery;
+  final UnionSearchResult? initialResult;
 
-  @override
-  State<SearchResultPage> createState() => _SearchResultPageState();
-}
+  UnionSearchResult get resolvedResult =>
+      initialResult ?? UnionSearchResult.search(initialQuery);
 
-class _SearchResultPageState extends State<SearchResultPage> {
-  late final searchResult = ValueNotifier(widget.searchResult);
-  late final searchBarController = TextEditingController(
-    text: widget.searchResult.query,
-  );
-
-  List<_SearchResultPageBody> buildContent(UnionSearchResult result) {
+  List<_SearchResultPageBody> _buildContent(UnionSearchResult result) {
     return [
       _SearchResultPageBody(result: result, filter: _SearchResultFilter.all),
       _SearchResultPageBody(result: result, filter: _SearchResultFilter.music),
@@ -34,59 +31,45 @@ class _SearchResultPageState extends State<SearchResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ColoredBox(
-      color: scheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: DefaultTabController(
-          length: 4,
-          child: Column(
-            children: [
-              Focus(
-                onFocusChange: HotkeysHelper.onFocusChanges,
-                child: Hero(
-                  tag: SEARCH_BAR_KEY,
-                  child: TextField(
-                    controller: searchBarController,
-                    decoration: const InputDecoration(
-                      suffixIcon: Padding(
-                        padding: EdgeInsets.only(right: 12.0),
-                        child: Icon(Symbols.search),
-                      ),
-                      hintText: "搜索歌曲、艺术家、专辑",
-                      border: OutlineInputBorder(),
+    final result = resolvedResult;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: DefaultTabController(
+        length: 4,
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                result.query,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-
-                    /// when 'enter' is pressed
-                    onSubmitted: (String query) {
-                      searchResult.value = UnionSearchResult.search(query);
-                    },
-                  ),
-                ),
               ),
-              const SizedBox(height: 8.0),
-              Material(
+            ),
+            const SizedBox(height: 8),
+            const Material(
+              type: MaterialType.transparency,
+              child: TabBar(
+                tabs: [
+                  Tab(text: _SearchResultFilter.allName),
+                  Tab(text: _SearchResultFilter.musicName),
+                  Tab(text: _SearchResultFilter.artistName),
+                  Tab(text: _SearchResultFilter.albumName),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Material(
                 type: MaterialType.transparency,
-                child: TabBar(
-                  tabs: _SearchResultFilter.values
-                      .map((filter) => Tab(text: filter.name))
-                      .toList(),
+                child: TabBarView(
+                  children: _buildContent(result),
                 ),
               ),
-              Expanded(
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: ValueListenableBuilder(
-                    valueListenable: searchResult,
-                    builder: (context, value, _) => TabBarView(
-                      children: buildContent(value),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -94,10 +77,15 @@ class _SearchResultPageState extends State<SearchResultPage> {
 }
 
 enum _SearchResultFilter {
-  all("所有"),
-  music("音乐"),
-  artist("艺术家"),
-  album("专辑");
+  all(_SearchResultFilter.allName),
+  music(_SearchResultFilter.musicName),
+  artist(_SearchResultFilter.artistName),
+  album(_SearchResultFilter.albumName);
+
+  static const String allName = "所有";
+  static const String musicName = "音乐";
+  static const String artistName = "艺术家";
+  static const String albumName = "专辑";
 
   const _SearchResultFilter(this.name);
   final String name;
@@ -175,7 +163,7 @@ class _SearchResultPageBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    List<Widget> slivers = [];
+    final slivers = <Widget>[];
     switch (filter) {
       case _SearchResultFilter.all:
         if (result.audios.isNotEmpty) {

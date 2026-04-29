@@ -18,7 +18,7 @@ class AppShadcnTheme {
       typography: const shadcn.Typography.geist(),
       surfaceOpacity: isDark ? 0.86 : 0.94,
       surfaceBlur: 18,
-      enableFeedback: true,
+      enableFeedback: false,
       density: shadcn.Density.compactDensity,
     );
   }

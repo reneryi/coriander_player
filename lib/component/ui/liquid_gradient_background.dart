@@ -1,7 +1,7 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:coriander_player/app_settings.dart';
+import 'package:qisheng_player/app_settings.dart';
 import 'package:flutter/material.dart';
 
 @immutable
@@ -32,26 +32,26 @@ LiquidGradientProfile resolveLiquidGradientProfile(
     UiEffectsLevel.performance => LiquidGradientProfile(
         animated: false,
         period: const Duration(seconds: 44),
-        bandOpacity: 0.13 * tintScale,
+        bandOpacity: 0.16 * tintScale,
         bandBlurSigma: 0,
-        scrimOpacity: tintOnly ? 0.08 : 0.18,
-        mixStrength: tintOnly ? 0.16 : 0.36,
+        scrimOpacity: tintOnly ? 0.06 : 0.14,
+        mixStrength: tintOnly ? 0.18 : 0.4,
       ),
     UiEffectsLevel.balanced => LiquidGradientProfile(
-        animated: true,
-        period: const Duration(seconds: 40),
+        animated: false,
+        period: const Duration(seconds: 58),
         bandOpacity: 0.18 * tintScale,
-        bandBlurSigma: 28,
-        scrimOpacity: tintOnly ? 0.1 : 0.2,
+        bandBlurSigma: 16,
+        scrimOpacity: tintOnly ? 0.08 : 0.16,
         mixStrength: tintOnly ? 0.18 : 0.42,
       ),
     UiEffectsLevel.visual => LiquidGradientProfile(
         animated: true,
-        period: const Duration(seconds: 30),
-        bandOpacity: 0.26 * tintScale,
-        bandBlurSigma: 42,
-        scrimOpacity: tintOnly ? 0.12 : 0.24,
-        mixStrength: tintOnly ? 0.22 : 0.52,
+        period: const Duration(seconds: 46),
+        bandOpacity: 0.34 * tintScale,
+        bandBlurSigma: 62,
+        scrimOpacity: tintOnly ? 0.1 : 0.18,
+        mixStrength: tintOnly ? 0.24 : 0.58,
       ),
   };
 }
@@ -190,20 +190,43 @@ class _LiquidPalette {
     required List<Color> backgroundColors,
     required List<Color> paletteColors,
   }) {
-    const fallbackTop = Color(0xFF0C1219);
-    const fallbackMiddle = Color(0xFF040609);
-    const fallbackBottom = Color(0xFF010203);
+    const fallbackTop = Color(0xFF201B35);
+    const fallbackMiddle = Color(0xFF132C45);
+    const fallbackBottom = Color(0xFF3A311B);
+    const mistyLavender = Color(0xFFD8C9FF);
+    const softGold = Color(0xFFF3D38C);
+    const mistyBlue = Color(0xFFA7DAF3);
+    const roseMist = Color(0xFFE9B8AA);
 
     Color bgAt(int index, Color fallback) {
       if (index >= backgroundColors.length) return fallback;
       return backgroundColors[index];
     }
 
-    final primary =
-        paletteColors.isNotEmpty ? paletteColors[0] : bgAt(0, fallbackTop);
-    final secondary = paletteColors.length > 1 ? paletteColors[1] : primary;
-    final accent = paletteColors.length > 2 ? paletteColors[2] : secondary;
-    final muted = paletteColors.length > 3 ? paletteColors[3] : secondary;
+    Color blendAnchor(Color anchor, Color color, double influence) {
+      return Color.lerp(anchor, color, influence)!;
+    }
+
+    final primary = blendAnchor(
+      mistyLavender,
+      paletteColors.isNotEmpty ? paletteColors[0] : bgAt(0, fallbackTop),
+      0.42,
+    );
+    final secondary = blendAnchor(
+      softGold,
+      paletteColors.length > 1 ? paletteColors[1] : primary,
+      0.36,
+    );
+    final accent = blendAnchor(
+      mistyBlue,
+      paletteColors.length > 2 ? paletteColors[2] : secondary,
+      0.34,
+    );
+    final muted = blendAnchor(
+      roseMist,
+      paletteColors.length > 3 ? paletteColors[3] : secondary,
+      0.32,
+    );
 
     return _LiquidPalette(
       top: bgAt(0, fallbackTop),

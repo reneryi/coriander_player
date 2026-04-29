@@ -1,4 +1,4 @@
-import 'package:coriander_player/app_settings.dart';
+﻿import 'package:qisheng_player/app_settings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,19 +1,59 @@
 import 'dart:io';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/settings_tile.dart';
-import 'package:coriander_player/page/settings_page/theme_picker_dialog.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/src/rust/api/installed_font.dart';
-import 'package:coriander_player/theme_provider.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/window_controls.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/settings_tile.dart';
+import 'package:qisheng_player/page/settings_page/theme_picker_dialog.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/src/rust/api/installed_font.dart';
+import 'package:qisheng_player/theme_provider.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/window_controls.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
+
+class _FontPreviewRegistry {
+  const _FontPreviewRegistry._();
+
+  static final Set<String> _loadedFamilies = <String>{};
+  static final Set<String> _failedFamilies = <String>{};
+  static final Map<String, Future<void>> _pendingLoads =
+      <String, Future<void>>{};
+
+  static void markLoaded(String? family) {
+    final normalized = family?.trim();
+    if (normalized == null || normalized.isEmpty) return;
+    _loadedFamilies.add(normalized);
+  }
+
+  static Future<void> ensureLoaded(InstalledFont font) {
+    final family = font.fullName.trim();
+    if (family.isEmpty ||
+        _loadedFamilies.contains(family) ||
+        _failedFamilies.contains(family)) {
+      return Future<void>.value();
+    }
+
+    return _pendingLoads.putIfAbsent(family, () async {
+      try {
+        final fontLoader = FontLoader(family);
+        final bytes = await File(font.path).readAsBytes();
+        fontLoader.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
+        await fontLoader.load();
+        _loadedFamilies.add(family);
+      } catch (err, trace) {
+        _failedFamilies.add(family);
+        LOGGER.w('[font preview] load failed for $family: $err',
+            stackTrace: trace);
+      } finally {
+        _pendingLoads.remove(family);
+      }
+    });
+  }
+}
 
 class ThemeSelector extends StatelessWidget {
   const ThemeSelector({super.key});
@@ -226,13 +266,50 @@ class WindowBackdropModeControl extends StatefulWidget {
 
 class _WindowBackdropModeControlState extends State<WindowBackdropModeControl> {
   final settings = AppSettings.instance;
-  String _effectiveMode = AppSettings.instance.windowBackdropMode.name;
+  WindowBackdropModeResult? _latestResult = WindowControls.lastBackdropResult;
+
+  String _modeLabel(String mode) {
+    return switch (WindowBackdropMode.fromName(mode)) {
+      WindowBackdropMode.auto => "自动",
+      WindowBackdropMode.mica => "云母",
+      WindowBackdropMode.acrylic => "亚克力",
+      WindowBackdropMode.none => "关闭",
+      null => mode,
+    };
+  }
+
+  String _fallbackLabel(String? value) {
+    return switch (value) {
+      null => "",
+      "empty_platform_response" => "平台没有返回结果",
+      "platform_exception" => "平台通道调用失败",
+      "unsupported_platform" => "系统不支持原生背景材质",
+      "system_backdrop_requires_windows_11" => "需要 Windows 11",
+      "acrylic_requires_windows_11_22h2" => "亚克力需要 Windows 11 22H2 或更高版本",
+      "window_handle_unavailable" => "窗口句柄不可用",
+      final other => other,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    final result = _latestResult ??
+        theme.windowBackdropResult ??
+        WindowBackdropModeResult.fallback(
+          theme.windowBackdropMode,
+          appliedMode: theme.windowBackdropMode,
+          nativeBackdropSupported: false,
+          fallbackReason: 'unknown',
+        );
+    final effectiveModeLabel = _modeLabel(result.appliedMode.name);
+    final nativeStatus = result.nativeApplySucceeded ? '' : '（应用内模拟效果）';
+    final fallbackText = _fallbackLabel(result.fallbackReason);
+    final fallbackHint = fallbackText.isEmpty ? '' : '，回退原因：$fallbackText';
     return SettingsTile(
       description: "Windows 背景材质",
-      hint: "Auto 会跟随系统策略；不支持的模式会回退。当前实际模式：$_effectiveMode",
+      hint:
+          "自动模式会跟随系统策略；不支持的模式会回退。当前实际模式：$effectiveModeLabel$nativeStatus$fallbackHint",
       action: SegmentedButton<WindowBackdropMode>(
         showSelectedIcon: false,
         segments: const [
@@ -244,12 +321,12 @@ class _WindowBackdropModeControlState extends State<WindowBackdropModeControl> {
           ButtonSegment<WindowBackdropMode>(
             value: WindowBackdropMode.mica,
             icon: Icon(Symbols.layers),
-            label: Text("Mica"),
+            label: Text("云母"),
           ),
           ButtonSegment<WindowBackdropMode>(
             value: WindowBackdropMode.acrylic,
             icon: Icon(Symbols.blur_on),
-            label: Text("Acrylic"),
+            label: Text("亚克力"),
           ),
           ButtonSegment<WindowBackdropMode>(
             value: WindowBackdropMode.none,
@@ -257,22 +334,21 @@ class _WindowBackdropModeControlState extends State<WindowBackdropModeControl> {
             label: Text("关闭"),
           ),
         ],
-        selected: {settings.windowBackdropMode},
+        selected: {theme.windowBackdropMode},
         onSelectionChanged: (selection) async {
           final requested = selection.first;
-          if (requested == settings.windowBackdropMode) return;
+          if (requested == theme.windowBackdropMode) return;
 
-          final effective = await WindowControls.setWindowBackdropMode(
+          final result = await ThemeProvider.instance.applyWindowBackdropMode(
             requested,
           );
           setState(() {
             settings.windowBackdropMode = requested;
-            _effectiveMode = effective;
+            _latestResult = result;
           });
-          await settings.saveSettings();
-          if (effective != requested.name && context.mounted) {
+          if (result.appliedMode != requested && context.mounted) {
             showTextOnSnackBar(
-              "背景材质已回退：${requested.name} -> $effective",
+              "背景材质已从 ${_modeLabel(requested.name)} 回退为 ${_modeLabel(result.appliedMode.name)}",
             );
           }
         },
@@ -324,7 +400,7 @@ class _UseSystemThemeModeSwitchState extends State<UseSystemThemeModeSwitch> {
   Widget build(BuildContext context) {
     return SettingsTile(
       description: "启动时使用系统明暗模式",
-      hint: "跟随系统明暗模式设置。",
+      hint: "跟随系统明暗模式设置　",
       action: Switch(
         value: settings.useSystemThemeMode,
         onChanged: (_) async {
@@ -369,6 +445,7 @@ class SelectFontCombobox extends StatelessWidget {
               }),
             );
             await fontLoader.load();
+            _FontPreviewRegistry.markLoaded(selectedFont.fullName);
             ThemeProvider.instance.changeFontFamily(selectedFont.fullName);
 
             final settings = AppSettings.instance;
@@ -439,10 +516,27 @@ class _FontSelector extends StatelessWidget {
 
   final List<InstalledFont> installedFont;
 
+  TextStyle _previewStyle(String? family, Color color, {double size = 15}) {
+    return TextStyle(
+      fontFamily: family,
+      fontFamilyFallback: const [
+        'Segoe UI Variable Text',
+        'Microsoft YaHei UI',
+        'Microsoft YaHei',
+        'PingFang SC',
+        'Noto Sans CJK SC',
+      ],
+      color: color,
+      fontSize: size,
+      fontWeight: FontWeight.w500,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
     final scheme = Theme.of(context).colorScheme;
+    _FontPreviewRegistry.markLoaded(theme.fontFamily);
     return Dialog(
       insetPadding: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
@@ -468,21 +562,54 @@ class _FontSelector extends StatelessWidget {
                   ),
                 ),
               ),
-              Text("当前字体：${theme.fontFamily ?? "默认"}"),
+              Text('当前字体：${theme.fontFamily ?? "默认"}'),
               const SizedBox(height: 8.0),
               Expanded(
                 child: Material(
                   type: MaterialType.transparency,
                   child: ListView.builder(
                     itemCount: installedFont.length,
-                    itemExtent: 48,
-                    itemBuilder: (context, i) => ListTile(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      title: Text(installedFont[i].fullName),
-                      onTap: () => Navigator.pop(context, installedFont[i]),
-                    ),
+                    itemExtent: 64,
+                    itemBuilder: (context, i) {
+                      final font = installedFont[i];
+                      final isCurrent = font.fullName == theme.fontFamily;
+                      return FutureBuilder<void>(
+                        future: _FontPreviewRegistry.ensureLoaded(font),
+                        builder: (context, snapshot) {
+                          final previewFamily =
+                              snapshot.hasError ? null : font.fullName;
+                          return ListTile(
+                            enableFeedback: false,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            trailing: isCurrent
+                                ? Icon(
+                                    Icons.check_rounded,
+                                    size: 18,
+                                    color: scheme.primary,
+                                  )
+                                : null,
+                            title: Text(
+                              font.fullName,
+                              style: _previewStyle(
+                                previewFamily,
+                                scheme.onSurface,
+                              ),
+                            ),
+                            subtitle: Text(
+                              "AaBbCc 你好 123",
+                              style: _previewStyle(
+                                previewFamily,
+                                scheme.onSurface.withValues(alpha: 0.64),
+                                size: 12,
+                              ),
+                            ),
+                            onTap: () => Navigator.pop(context, font),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
@@ -565,7 +692,7 @@ class _BackgroundImageSettingsState extends State<BackgroundImageSettings> {
         ),
         SettingsTile(
           description: "背景透明度",
-          hint: "建议使用 10% - 30%，避免背景图影响文字阅读。",
+          hint: "建议使用 10% - 30%，避免背景图片影响文字阅读。",
           action: SizedBox(
             width: 260,
             child: Row(

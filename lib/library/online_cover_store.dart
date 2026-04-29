@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/music_matcher.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/music_matcher.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -103,7 +103,7 @@ class OnlineCoverStore {
 
       final client = HttpClient();
       final req = await client.getUrl(uri);
-      req.headers.set(HttpHeaders.userAgentHeader, "CorianderPlayer/1.5");
+      req.headers.set(HttpHeaders.userAgentHeader, "QishengPlayer/1.7");
       final resp = await req.close();
       if (resp.statusCode < 200 || resp.statusCode >= 300) return null;
 

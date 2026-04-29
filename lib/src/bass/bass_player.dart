@@ -2,13 +2,12 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/src/bass/bass_wasapi.dart' as BASS;
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/src/bass/bass_wasapi.dart' as BASS;
+import 'package:qisheng_player/utils.dart';
 import 'package:ffi/ffi.dart' as ffi;
 import 'package:path/path.dart' as path;
-import 'package:coriander_player/src/bass/bass.dart' as BASS;
+import 'package:qisheng_player/src/bass/bass.dart' as BASS;
 import 'dart:ffi' as ffi;
 
 enum PlayerState {
@@ -44,14 +43,10 @@ const BASS_REQUIRED_PLUGINS = [
   "basswv.dll",
 ];
 
-/// 可选插件：缺失时不阻断启动，但具备时会扩展格式支持（如 DTS）。
+/// 鍙€夋彃浠讹細缂哄け鏃朵笉闃绘柇鍚姩锛屼絾鍏峰鏃朵細鎵╁睍鏍煎紡鏀寔锛堝 DTS锛夈€?
 const BASS_OPTIONAL_PLUGINS = [
   "bass_aac.dll",
 ];
-
-const _bassFft256ValueCount = 128;
-const _bassFft256UsableBins = _bassFft256ValueCount - 1;
-const _bassChannelGetDataError = 0xFFFFFFFF;
 
 class BassPlayer {
   late final ffi.DynamicLibrary _bassLib;
@@ -130,45 +125,18 @@ class BassPlayer {
     return volDsp.value;
   }
 
-  List<double> sampleFft({int bins = 64}) {
-    if (_fstream == null || wasapiExclusive) return const <double>[];
-    if (playerState != PlayerState.playing) return const <double>[];
-
-    final requestedBins = bins.clamp(1, _bassFft256UsableBins).toInt();
-    final fft = ffi.malloc.allocate<ffi.Float>(
-      _bassFft256ValueCount * ffi.sizeOf<ffi.Float>(),
-    );
-
+  int _openStreamHandle(String path, {required int flags}) {
+    final pathPointer = path.toNativeUtf16();
     try {
-      final read = _bass.BASS_ChannelGetData(
-        _fstream!,
-        fft.cast<ffi.Void>(),
-        BASS.BASS_DATA_FFT256,
+      return _bass.BASS_StreamCreateFile(
+        BASS.FALSE,
+        pathPointer.cast<ffi.Void>(),
+        0,
+        0,
+        flags,
       );
-      final expectedBytes = _bassFft256ValueCount * ffi.sizeOf<ffi.Float>();
-      if (read <= 0 ||
-          read == _bassChannelGetDataError ||
-          read > expectedBytes) {
-        return const <double>[];
-      }
-
-      final values = List<double>.filled(requestedBins, 0);
-      for (var i = 0; i < requestedBins; i++) {
-        final ratio = requestedBins == 1 ? 0.0 : i / (requestedBins - 1);
-        final curvedRatio = math.pow(ratio, 1.35).toDouble();
-        final sourceIndex =
-            1 + (curvedRatio * (_bassFft256UsableBins - 1)).round();
-        final rawValue = fft[sourceIndex];
-        final raw = rawValue.isFinite ? math.max(0.0, rawValue) : 0.0;
-        final shaped = math.log(1 + raw * 140) / math.log(141);
-        values[i] = shaped.clamp(0.0, 1.0).toDouble();
-      }
-      return values;
-    } catch (err) {
-      LOGGER.w("[bass fft] sample failed: $err");
-      return const <double>[];
     } finally {
-      ffi.malloc.free(fft);
+      ffi.malloc.free(pathPointer);
     }
   }
 
@@ -405,18 +373,14 @@ class BassPlayer {
       _positionUpdater?.cancel();
       freeFStream();
     }
-    final pathPointer = path.toNativeUtf16() as ffi.Pointer<ffi.Void>;
 
-    /// 设置 flags 为 BASS_UNICODE 才可以找到文件。
+    /// 璁剧疆 flags 涓?BASS_UNICODE 鎵嶅彲浠ユ壘鍒版枃浠躲€?
     const flags =
         BASS.BASS_UNICODE | BASS.BASS_SAMPLE_FLOAT | BASS.BASS_ASYNCFILE;
     const exclusiveFlags = flags | BASS.BASS_STREAM_DECODE;
-    final handle = _bass.BASS_StreamCreateFile(
-      BASS.FALSE,
-      pathPointer,
-      0,
-      0,
-      wasapiExclusive ? exclusiveFlags : flags,
+    final handle = _openStreamHandle(
+      path,
+      flags: wasapiExclusive ? exclusiveFlags : flags,
     );
 
     if (handle != 0) {
@@ -625,10 +589,11 @@ class BassPlayer {
   /// do nothing if [setSource] hasn't been called
   void seek(double position) {
     if (_fstream == null) return;
+    final targetBytes = _bass.BASS_ChannelSeconds2Bytes(_fstream!, position);
 
     if (_bass.BASS_ChannelSetPosition(
           _fstream!,
-          _bass.BASS_ChannelSeconds2Bytes(_fstream!, position),
+          targetBytes,
           BASS.BASS_POS_BYTE,
         ) ==
         0) {

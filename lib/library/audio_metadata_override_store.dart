@@ -1,9 +1,9 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/utils.dart';
 
 class AudioMetadataOverrideStore {
   AudioMetadataOverrideStore._();
@@ -57,17 +57,17 @@ class AudioMetadataOverrideStore {
   void applyToAudio(Audio audio) {
     final override = _overrides[audio.path];
     if (override == null) return;
-    if (override["title"] != null && override["title"]!.trim().isNotEmpty) {
-      audio.title = override["title"]!.trim();
-    }
-    if (override["artist"] != null && override["artist"]!.trim().isNotEmpty) {
-      audio.artist = override["artist"]!.trim();
-    }
-    if (override["album"] != null && override["album"]!.trim().isNotEmpty) {
-      audio.album = override["album"]!.trim();
-    }
-    audio.splitedArtists =
-        audio.artist.split(RegExp(AppSettings.instance.artistSplitPattern));
+    audio.updateMetadata(
+      title: override["title"]?.trim().isNotEmpty == true
+          ? override["title"]!.trim()
+          : null,
+      artist: override["artist"]?.trim().isNotEmpty == true
+          ? override["artist"]!.trim()
+          : null,
+      album: override["album"]?.trim().isNotEmpty == true
+          ? override["album"]!.trim()
+          : null,
+    );
   }
 
   void applyToLibrary(AudioLibrary library) {

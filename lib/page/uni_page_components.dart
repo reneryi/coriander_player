@@ -1,12 +1,12 @@
 import 'dart:io';
 
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/online_cover_store.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/online_cover_store.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -23,6 +23,7 @@ class ShufflePlay<T> extends StatelessWidget {
       icon: const Icon(Symbols.shuffle),
       label: const Text("随机播放"),
       style: const ButtonStyle(
+        enableFeedback: false,
         fixedSize: WidgetStatePropertyAll(Size.fromHeight(48)),
       ),
     );
@@ -72,6 +73,7 @@ class SortMethodComboBox<T> extends StatelessWidget {
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(
+                enableFeedback: false,
                 borderRadius: BorderRadius.circular(24),
                 onTap: () {
                   if (menuController.isOpen) {
@@ -123,12 +125,13 @@ class SortOrderSwitch<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     var isAscending = sortOrder == SortOrder.ascending;
     return IconButton.filledTonal(
-      tooltip: "切换排序顺序；现在：${isAscending ? "升序" : "降序"}",
+      enableFeedback: false,
+      tooltip: "切换排序顺序：当前为${isAscending ? "升序" : "降序"}",
       style: const ButtonStyle(
         fixedSize: WidgetStatePropertyAll(Size(48, 48)),
       ),
       onPressed: () => setSortOrder(
-        isAscending ? SortOrder.decending : SortOrder.ascending,
+        isAscending ? SortOrder.descending : SortOrder.ascending,
       ),
       icon: Icon(isAscending ? Symbols.arrow_upward : Symbols.arrow_downward),
     );
@@ -145,7 +148,8 @@ class ContentViewSwitch<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     var isListView = contentView == ContentView.list;
     return IconButton.filledTonal(
-      tooltip: "切换页面视图；现在：${isListView ? "列表" : "表格"}",
+      enableFeedback: false,
+      tooltip: "切换页面视图：当前为${isListView ? "列表" : "表格"}",
       style: const ButtonStyle(
         fixedSize: WidgetStatePropertyAll(Size(48, 48)),
       ),
@@ -201,7 +205,7 @@ class AddAllToPlaylist extends StatelessWidget {
       final trimmed = createdName?.trim();
       if (trimmed == null || trimmed.isEmpty) return null;
       if (PLAYLISTS.any((item) => item.name == trimmed)) {
-        showTextOnSnackBar("歌单“$trimmed”已存在");
+        showTextOnSnackBar("歌单 trimmed”已存在");
         return null;
       }
       final playlist = Playlist(trimmed, {});
@@ -241,7 +245,7 @@ class AddAllToPlaylist extends StatelessWidget {
               final trimmed = createdName?.trim();
               if (trimmed == null || trimmed.isEmpty) return;
               if (PLAYLISTS.any((item) => item.name == trimmed)) {
-                showTextOnSnackBar("歌单“$trimmed”已存在");
+                showTextOnSnackBar("歌单 trimmed”已存在");
                 return;
               }
               final playlist = Playlist(trimmed, {});
@@ -284,11 +288,11 @@ class AddAllToPlaylist extends StatelessWidget {
     }
     if (existedCount > 0) {
       showTextOnSnackBar(
-        "已添加$addedCount首到“${targetPlaylist.name}”，$existedCount首已存在",
+        "已添加 $addedCount 首到“${targetPlaylist.name}”，$existedCount 首已存在",
       );
       return;
     }
-    showTextOnSnackBar("成功将$addedCount首添加到歌单“${targetPlaylist.name}”");
+    showTextOnSnackBar("成功将 $addedCount 首添加到歌单“${targetPlaylist.name}”");
   }
 
   @override
@@ -395,7 +399,7 @@ class DeleteSelectedAudios extends StatelessWidget {
 
     if (pathsToRemove.isEmpty) {
       if (failedMediaPaths.isNotEmpty) {
-        showTextOnSnackBar("删除失败：${failedMediaPaths.length}个源文件无法删除");
+        showTextOnSnackBar("鍒犻櫎澶辫触锛?{failedMediaPaths.length}个源文件无法删除");
       }
       return;
     }
@@ -427,6 +431,7 @@ class DeleteSelectedAudios extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return IconButton.filled(
+      enableFeedback: false,
       tooltip: "删除选中歌曲",
       onPressed: () => _deleteSelected(context),
       style: ButtonStyle(
@@ -452,6 +457,7 @@ class MultiSelectSelectOrClearAll<T> extends StatelessWidget {
     return ListenableBuilder(
       listenable: multiSelectController,
       builder: (context, _) => IconButton.filledTonal(
+        enableFeedback: false,
         tooltip: multiSelectController.selected.isEmpty ? "全选" : "取消全选",
         onPressed: () {
           if (multiSelectController.selected.isEmpty) {
@@ -478,6 +484,7 @@ class MultiSelectExit<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton.filledTonal(
+      enableFeedback: false,
       tooltip: "退出多选视图",
       onPressed: () {
         multiSelectController.useMultiSelectView(false);

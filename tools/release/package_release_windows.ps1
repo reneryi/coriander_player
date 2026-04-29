@@ -60,8 +60,8 @@ $installerWorkDir = Join-Path $distRoot "installer_work"
 if (!(Test-Path $mainReleaseDir)) {
   throw "Main release output not found: $mainReleaseDir"
 }
-if (!(Test-Path (Join-Path $mainReleaseDir "coriander_player.exe"))) {
-  throw "Main release executable missing: $(Join-Path $mainReleaseDir 'coriander_player.exe')"
+if (!(Test-Path (Join-Path $mainReleaseDir "qisheng_player.exe"))) {
+  throw "Main release executable missing: $(Join-Path $mainReleaseDir 'qisheng_player.exe')"
 }
 if (!(Test-Path $desktopLyricReleaseDir)) {
   throw "desktop_lyric release output not found: $desktopLyricReleaseDir"
@@ -92,8 +92,8 @@ if (Test-Path $installerWorkDir) {
 }
 New-Item -ItemType Directory -Path $installerWorkDir -Force | Out-Null
 
-$zipName = "Coriander-Player-v$Version-Windows-x64.zip"
-$setupName = "Coriander-Player-v$Version-Setup-x64.exe"
+$zipName = "Qisheng-Player-v$Version-Windows-x64.zip"
+$setupName = "Qisheng-Player-v$Version-Setup-x64.exe"
 $zipPath = Join-Path $artifactPackagesDir $zipName
 $setupPath = Join-Path $artifactPackagesDir $setupName
 
@@ -125,11 +125,11 @@ $escapedReleaseDir = $releasePackageDir.Replace("\", "\\")
 $escapedArtifactPackagesDir = $artifactPackagesDir.Replace("\", "\\")
 $escapedIconPath = (Join-Path $repoRoot "app_icon.ico").Replace("\", "\\")
 $issContent = @"
-#define MyAppName "Coriander Player"
+#define MyAppName "Qisheng Player"
 #define MyAppVersion "$Version"
 #define MyAppPublisher "reneryi"
 #define MyAppURL "https://github.com/reneryi/coriander_player"
-#define MyAppExeName "coriander_player.exe"
+#define MyAppExeName "qisheng_player.exe"
 #define ReleaseDir "$escapedReleaseDir"
 
 [Setup]
@@ -146,7 +146,7 @@ UsePreviousAppDir=no
 DisableDirPage=no
 DefaultGroupName={#MyAppName}
 OutputDir=$escapedArtifactPackagesDir
-OutputBaseFilename=Coriander-Player-v{#MyAppVersion}-Setup-x64
+OutputBaseFilename=Qisheng-Player-v{#MyAppVersion}-Setup-x64
 SetupIconFile=$escapedIconPath
 Compression=lzma2/ultra64
 SolidCompression=yes

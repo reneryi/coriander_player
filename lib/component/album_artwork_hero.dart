@@ -1,4 +1,4 @@
-import 'package:coriander_player/library/audio_library.dart';
+﻿import 'package:qisheng_player/library/audio_library.dart';
 
 const albumArtworkHeroTagPrefix = 'album-artwork';
 

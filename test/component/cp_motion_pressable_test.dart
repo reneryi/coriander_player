@@ -1,7 +1,7 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 
-import 'package:coriander_player/component/cp/cp_components.dart';
-import 'package:coriander_player/theme/app_theme.dart';
+import 'package:qisheng_player/component/cp/cp_components.dart';
+import 'package:qisheng_player/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

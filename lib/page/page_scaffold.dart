@@ -1,6 +1,5 @@
-import 'package:coriander_player/component/responsive_builder.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+﻿import 'package:qisheng_player/component/responsive_builder.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 
 class PageScaffold extends StatelessWidget {
@@ -8,6 +7,7 @@ class PageScaffold extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.titleAction,
     this.primaryAction,
     this.secondaryActions = const [],
     required this.body,
@@ -15,6 +15,7 @@ class PageScaffold extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+  final Widget? titleAction;
   final Widget? primaryAction;
   final List<Widget> secondaryActions;
   final Widget body;
@@ -23,29 +24,39 @@ class PageScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       builder: (context, screenType) {
+        final header = switch (screenType) {
+          ScreenType.small => _SmallHeader(
+              title: title,
+              subtitle: subtitle,
+              titleAction: titleAction,
+              primaryAction: primaryAction,
+              secondaryActions: secondaryActions,
+            ),
+          ScreenType.medium || ScreenType.large => _WideHeader(
+              title: title,
+              subtitle: subtitle,
+              titleAction: titleAction,
+              primaryAction: primaryAction,
+              secondaryActions: secondaryActions,
+            ),
+        };
+
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppSurface(
-                variant: AppSurfaceVariant.inset,
-                radius: context.surfaces.radiusXl,
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                child: switch (screenType) {
-                  ScreenType.small => _SmallHeader(
-                      title: title,
-                      subtitle: subtitle,
-                      primaryAction: primaryAction,
-                      secondaryActions: secondaryActions,
-                    ),
-                  ScreenType.medium || ScreenType.large => _WideHeader(
-                      title: title,
-                      subtitle: subtitle,
-                      primaryAction: primaryAction,
-                      secondaryActions: secondaryActions,
-                    ),
-                },
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 4, 6, 0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      const Positioned.fill(child: _HeaderHitAbsorber()),
+                      header,
+                    ],
+                  ),
+                ),
               ),
               SizedBox(height: context.visuals.contentHeaderGap),
               Expanded(child: body),
@@ -57,40 +68,51 @@ class PageScaffold extends StatelessWidget {
   }
 }
 
+class _HeaderHitAbsorber extends StatelessWidget {
+  const _HeaderHitAbsorber();
+
+  @override
+  Widget build(BuildContext context) {
+    return const AbsorbPointer(child: SizedBox.expand());
+  }
+}
+
 class _SmallHeader extends StatelessWidget {
   const _SmallHeader({
     required this.title,
     required this.subtitle,
+    required this.titleAction,
     required this.primaryAction,
     required this.secondaryActions,
   });
 
   final String title;
   final String? subtitle;
+  final Widget? titleAction;
   final Widget? primaryAction;
   final List<Widget> secondaryActions;
 
   @override
   Widget build(BuildContext context) {
+    final actions = [
+      if (primaryAction != null) primaryAction!,
+      ...secondaryActions,
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _TitleBlock(title: title, subtitle: subtitle),
-        if (primaryAction != null || secondaryActions.isNotEmpty) ...[
+        _TitleBlock(
+          title: title,
+          subtitle: subtitle,
+          titleAction: titleAction,
+        ),
+        if (actions.isNotEmpty) ...[
           const SizedBox(height: 12),
-          if (primaryAction != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: primaryAction!,
-              ),
-            ),
-          if (secondaryActions.isNotEmpty)
-            _HorizontalActions(
-              actions: secondaryActions,
-              alignment: MainAxisAlignment.start,
-            ),
+          _HorizontalActions(
+            actions: actions,
+            alignment: MainAxisAlignment.start,
+          ),
         ],
       ],
     );
@@ -101,12 +123,14 @@ class _WideHeader extends StatelessWidget {
   const _WideHeader({
     required this.title,
     required this.subtitle,
+    required this.titleAction,
     required this.primaryAction,
     required this.secondaryActions,
   });
 
   final String title;
   final String? subtitle;
+  final Widget? titleAction;
   final Widget? primaryAction;
   final List<Widget> secondaryActions;
 
@@ -114,64 +138,37 @@ class _WideHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final hasActions = primaryAction != null || secondaryActions.isNotEmpty;
-        final compact = constraints.maxWidth < 1120;
-
-        if (!hasActions) {
-          return _TitleBlock(title: title, subtitle: subtitle);
-        }
-
-        final actions = ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: compact ? constraints.maxWidth : 640,
-          ),
-          child: Column(
-            crossAxisAlignment:
-                compact ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-            children: [
-              if (primaryAction != null)
-                Align(
-                  alignment:
-                      compact ? Alignment.centerLeft : Alignment.centerRight,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: primaryAction!,
-                  ),
-                ),
-              if (secondaryActions.isNotEmpty) ...[
-                if (primaryAction != null) const SizedBox(height: 10),
-                _HorizontalActions(
-                  actions: secondaryActions,
-                  alignment:
-                      compact ? MainAxisAlignment.start : MainAxisAlignment.end,
-                ),
-              ],
-            ],
-          ),
+        final actions = [
+          if (primaryAction != null) primaryAction!,
+          ...secondaryActions,
+        ];
+        final hasActions = actions.isNotEmpty;
+        final titleBlock = _TitleBlock(
+          title: title,
+          subtitle: subtitle,
+          titleAction: titleAction,
         );
 
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _TitleBlock(title: title, subtitle: subtitle),
-              const SizedBox(height: 14),
-              actions,
-            ],
-          );
+        if (!hasActions) {
+          return titleBlock;
         }
+
+        final actionRow = _HorizontalActions(
+          actions: actions,
+          alignment: MainAxisAlignment.end,
+        );
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: _TitleBlock(title: title, subtitle: subtitle),
+            Expanded(child: titleBlock),
+            const SizedBox(width: 18),
+            Flexible(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: actionRow,
               ),
             ),
-            const SizedBox(width: 18),
-            Flexible(child: actions),
           ],
         );
       },
@@ -209,10 +206,12 @@ class _TitleBlock extends StatelessWidget {
   const _TitleBlock({
     required this.title,
     required this.subtitle,
+    required this.titleAction,
   });
 
   final String title;
   final String? subtitle;
+  final Widget? titleAction;
 
   @override
   Widget build(BuildContext context) {
@@ -220,16 +219,27 @@ class _TitleBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 32,
-            height: 1.05,
-            color: scheme.onSurface,
-            fontWeight: FontWeight.w800,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 31,
+                  height: 1.05,
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            if (titleAction != null) ...[
+              const SizedBox(width: 12),
+              titleAction!,
+            ],
+          ],
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 6),

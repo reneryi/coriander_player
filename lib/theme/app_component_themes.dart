@@ -1,4 +1,4 @@
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 
 class AppComponentThemes {
@@ -16,7 +16,8 @@ class AppComponentThemes {
       style: ButtonStyle(
         animationDuration: const Duration(milliseconds: 200), // 丝滑动画
         minimumSize: const WidgetStatePropertyAll(_minInteractiveSize),
-        // 现代简约：更宽松的按钮内边距
+        enableFeedback: false,
+        // 鐜颁唬绠€绾︼細鏇村鏉剧殑鎸夐挳鍐呰竟璺?
         padding: _pressablePadding(
           const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
           visuals,
@@ -78,7 +79,8 @@ class AppComponentThemes {
       style: ButtonStyle(
         animationDuration: const Duration(milliseconds: 200), // 丝滑动画
         minimumSize: const WidgetStatePropertyAll(_minInteractiveSize),
-        // 现代简约：更宽松的文字按钮
+        enableFeedback: false,
+        // 鐜颁唬绠€绾︼細鏇村鏉剧殑鏂囧瓧鎸夐挳
         padding: _pressablePadding(
           const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
           visuals,
@@ -151,7 +153,8 @@ class AppComponentThemes {
       style: ButtonStyle(
         animationDuration: const Duration(milliseconds: 200), // 丝滑动画
         minimumSize: const WidgetStatePropertyAll(_minInteractiveSize),
-        // 现代简约：更宽松的轮廓按钮
+        enableFeedback: false,
+        // 鐜颁唬绠€绾︼細鏇村鏉剧殑杞粨鎸夐挳
         padding: _pressablePadding(
           const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
           visuals,
@@ -216,7 +219,8 @@ class AppComponentThemes {
       style: ButtonStyle(
         animationDuration: const Duration(milliseconds: 200), // 丝滑动画
         minimumSize: const WidgetStatePropertyAll(_minInteractiveSize),
-        // 现代简约：更宽松的浮起按钮
+        enableFeedback: false,
+        // 鐜颁唬绠€绾︼細鏇村鏉剧殑娴捣鎸夐挳
         padding: _pressablePadding(
           const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
           visuals,
@@ -269,6 +273,7 @@ class AppComponentThemes {
       style: ButtonStyle(
         minimumSize: const WidgetStatePropertyAll(_minInteractiveSize),
         fixedSize: const WidgetStatePropertyAll(_minInteractiveSize),
+        enableFeedback: false,
         padding: _pressablePadding(const EdgeInsets.all(10), visuals),
         iconColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
@@ -278,12 +283,12 @@ class AppComponentThemes {
         }),
         backgroundColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return accents.accentSoft.withValues(alpha: 0.92);
+            return accents.accentSoft.withValues(alpha: 0.58);
           }
           if (states.contains(WidgetState.hovered)) {
-            return surfaces.surfaceInset.withValues(alpha: 0.95);
+            return Colors.white.withValues(alpha: 0.14);
           }
-          return surfaces.surfaceInset.withValues(alpha: 0.74);
+          return Colors.white.withValues(alpha: 0.075);
         }),
         overlayColor: WidgetStatePropertyAll(
           scheme.onSurface.withValues(alpha: 0.08),
@@ -304,8 +309,7 @@ class AppComponentThemes {
               width: 1.4,
             );
           }
-          return BorderSide(
-              color: surfaces.strokeSubtle.withValues(alpha: 0.74));
+          return BorderSide(color: Colors.white.withValues(alpha: 0.12));
         }),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
@@ -328,7 +332,7 @@ class AppComponentThemes {
     return InputDecorationTheme(
       filled: true,
       fillColor: surfaces.surfaceInset.withValues(alpha: surfaces.panelAlpha),
-      // 现代简约：更宽松的输入框
+      // Input padding.
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.58)),
       prefixIconColor: scheme.onSurface.withValues(alpha: 0.72),
@@ -341,7 +345,7 @@ class AppComponentThemes {
     );
   }
 
-  // 现代简约：对话框使用更大圆角和柔和阴影
+  // 鐜颁唬绠€绾︼細瀵硅瘽妗嗕娇鐢ㄦ洿澶у渾瑙掑拰鏌斿拰闃村奖
   static DialogThemeData dialogTheme(
     AppSurfaceTokens surfaces,
   ) {
@@ -377,7 +381,7 @@ class AppComponentThemes {
     ColorScheme scheme,
     AppAccentTokens accents,
   ) {
-    // 现代简约：TabBar 未选中标签稍微更淡
+    // 鐜颁唬绠€绾︼細TabBar 鏈€変腑鏍囩绋嶅井鏇存贰
     return TabBarThemeData(
       dividerColor: Colors.transparent,
       indicatorColor: accents.accent,
@@ -397,7 +401,8 @@ class AppComponentThemes {
       style: ButtonStyle(
         animationDuration: const Duration(milliseconds: 200), // 丝滑动画
         minimumSize: const WidgetStatePropertyAll(_minInteractiveSize),
-        // 现代简约：分段按钮更宽松
+        enableFeedback: false,
+        // 鐜颁唬绠€绾︼細鍒嗘鎸夐挳鏇村鏉?
         padding: _pressablePadding(
           const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           visuals,
@@ -432,7 +437,7 @@ class AppComponentThemes {
           }
           return BorderSide(color: surfaces.strokeSubtle);
         }),
-        // 现代简约：分段按钮使用更大圆角
+        // 鐜颁唬绠€绾︼細鍒嗘鎸夐挳浣跨敤鏇村ぇ鍦嗚
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(surfaces.radiusXl),

@@ -18,6 +18,17 @@ const String PLAYLIST_DETAIL_PAGE = "/playlists/detail";
 const String SEARCH_PAGE = "/search";
 const String SEARCH_RESULT_PAGE = "/search/result";
 
+Uri buildSearchResultUri(String query) {
+  final trimmed = query.trim();
+  return Uri(
+    path: SEARCH_RESULT_PAGE,
+    queryParameters: trimmed.isEmpty ? null : {"q": trimmed},
+  );
+}
+
+String buildSearchResultLocation(String query) =>
+    buildSearchResultUri(query).toString();
+
 const String NOW_PLAYING_PAGE = "/nowplaying";
 
 const String SETTINGS_PAGE = "/settings";

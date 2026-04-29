@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:coriander_player/src/rust/api/system_theme.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_brand.dart';
+import 'package:qisheng_player/src/rust/api/system_theme.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:github/github.dart';
 import 'package:path/path.dart' as path;
@@ -47,9 +48,9 @@ enum UiVisualStyleMode {
   }
 }
 
-/// 把旧 app data 目录（如果存在）移到新的目录。
-/// 只在 app data 目录没有数据时进行。
-/// 从 C:\\Users\\$username\\AppData\\Roaming\\com.example\\coriander_player 移到 C:\\Users\\$username\\Documents\\coriander_player。
+/// 鎶婃棫 app data 鐩綍锛堝鏋滃瓨鍦級绉诲埌鏂扮殑鐩綍銆?
+/// 只在 app data 鐩綍娌℃湁鏁版嵁鏃惰繘琛屻€?
+/// 什C:\\Users\\$username\\AppData\\Roaming\\com.example\\coriander_player 移到 C:\\Users\\$username\\Documents\\coriander_player
 Future<void> migrateAppData() async {
   try {
     final newAppDataDir = await getAppDataDir();
@@ -73,26 +74,36 @@ Future<void> migrateAppData() async {
 
 Future<Directory> getAppDataDir() async {
   final dir = await getApplicationDocumentsDirectory();
-  return Directory(path.join(dir.path, "coriander_player"))
-      .create(recursive: true);
+  final newDir = Directory(path.join(dir.path, AppBrand.packageName));
+  final legacyDir = Directory(path.join(dir.path, AppBrand.legacyPackageName));
+
+  if (!newDir.existsSync() && legacyDir.existsSync()) {
+    try {
+      legacyDir.renameSync(newDir.path);
+    } on FileSystemException catch (err, trace) {
+      LOGGER.e(err, stackTrace: trace);
+    }
+  }
+
+  return newDir.create(recursive: true);
 }
 
 class AppSettings {
   static final github = GitHub();
-  static const String version = "1.7.1";
+  static const String version = "1.0.0";
   static const String releaseRepoOwner = "reneryi";
   static const String releaseRepoName = "coriander_player";
 
-  /// 主题模式：亮 / 暗 / 跟随系统
+  /// 主题模式：亮 / 鏆?/ 璺熼殢绯荤粺
   ThemeMode themeMode = getWindowsThemeMode();
 
-  /// 启动时或封面主题色不适合当主题时的主色
+  /// 鍚姩鏃舵垨灏侀潰涓婚鑹蹭笉閫傚悎褰撲富棰樻椂鐨勪富鑹?
   int defaultTheme = getWindowsTheme();
 
   /// 跟随歌曲封面的动态主题
   bool dynamicTheme = true;
 
-  /// 跟随系统主题色
+  /// 璺熼殢绯荤粺涓婚鑹?
   bool useSystemTheme = true;
 
   /// 跟随系统主题模式
@@ -319,8 +330,8 @@ class AppSettings {
         "UiVisualStyleMode": uiVisualStyleMode.name,
       };
 
-      // 只有在窗口不是最大化且不是全屏时才保存窗口尺寸。
-      // 这样 windowSize 始终保存的是窗口化时的尺寸。
+      // 鍙湁鍦ㄧ獥鍙ｄ笉鏄渶澶у寲涓斾笉鏄叏灞忔椂鎵嶄繚瀛樼獥鍙ｅ昂瀵搞€?
+      // 杩欐牱 windowSize 濮嬬粓淇濆瓨鐨勬槸绐楀彛鍖栨椂鐨勫昂瀵搞€?
       Size sizeToSave = windowSize;
       if (!isMaximized && !isFullScreen) {
         sizeToSave = await windowManager.getSize();

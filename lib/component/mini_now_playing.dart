@@ -1,12 +1,12 @@
-import 'package:coriander_player/component/rectangle_progress_indicator.dart';
-import 'package:coriander_player/component/responsive_builder.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/src/bass/bass_player.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
-import 'package:coriander_player/app_paths.dart' as app_paths;
+﻿import 'package:qisheng_player/app_brand.dart';
+import 'package:qisheng_player/component/rectangle_progress_indicator.dart';
+import 'package:qisheng_player/component/responsive_builder.dart';
+import 'package:qisheng_player/component/now_playing_navigation.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/src/bass/bass_player.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class MiniNowPlaying extends StatelessWidget {
@@ -69,10 +69,9 @@ class _NowPlayingForeground extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: InkWell(
+        enableFeedback: false,
         onTap: () {
-          final location = GoRouterState.of(context).uri.toString();
-          if (location == app_paths.NOW_PLAYING_PAGE) return;
-          context.go(app_paths.NOW_PLAYING_PAGE);
+          openNowPlayingRoute(context);
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -134,7 +133,7 @@ class _NowPlayingForeground extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          nowPlaying?.title ?? 'Coriander Player',
+                          nowPlaying?.displayTitle ?? AppBrand.displayName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -145,7 +144,7 @@ class _NowPlayingForeground extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           nowPlaying != null
-                              ? '${nowPlaying.artist} - ${nowPlaying.album}'
+                              ? nowPlaying.displayArtistAlbumLine
                               : 'Enjoy music',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -166,6 +165,7 @@ class _NowPlayingForeground extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
+                          enableFeedback: false,
                           tooltip: '上一首',
                           onPressed: playbackService.lastAudio,
                           icon: const Icon(Symbols.skip_previous),
@@ -187,6 +187,7 @@ class _NowPlayingForeground extends StatelessWidget {
                             return FilledButton(
                               onPressed: onPressed,
                               style: FilledButton.styleFrom(
+                                enableFeedback: false,
                                 minimumSize: const Size(48, 48),
                                 padding: const EdgeInsets.all(0),
                                 shape: const CircleBorder(),
@@ -200,6 +201,7 @@ class _NowPlayingForeground extends StatelessWidget {
                           },
                         ),
                         IconButton(
+                          enableFeedback: false,
                           tooltip: '下一首',
                           onPressed: playbackService.nextAudio,
                           icon: const Icon(Symbols.skip_next),

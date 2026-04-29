@@ -1,4 +1,4 @@
-import 'package:coriander_player/component/ui/expandable_search_action.dart';
+﻿import 'package:qisheng_player/component/ui/expandable_search_action.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,5 +26,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ExpandableSearchAction accepts space while typing',
+      (tester) async {
+    String latestValue = '';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTestTheme(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 280,
+              child: ExpandableSearchAction(
+                hintText: 'Search',
+                onChanged: (value) => latestValue = value,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('搜索当前页面'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'lofi mix');
+    await tester.pump();
+
+    expect(find.text('lofi mix'), findsOneWidget);
+    expect(latestValue, 'lofi mix');
   });
 }

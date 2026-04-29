@@ -1,11 +1,12 @@
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/component/audio_tile.dart';
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/page/uni_detail_page.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/page/uni_page_components.dart';
+﻿import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/component/cp/cp_components.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/component/audio_tile.dart';
+import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/page/uni_detail_page.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/page/uni_page_components.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -27,7 +28,7 @@ class ArtistDetailPage extends StatelessWidget {
       backgroundPic: artist.works.first.cover,
       picShape: PicShape.oval,
       title: artist.name,
-      subtitle: "${artist.works.length} 首作品",
+      subtitle: "${artist.works.length} 首作哀",
       secondaryContent: secondaryContent,
       secondaryContentBuilder: (context, audio, i, multiSelectController) =>
           AudioTile(
@@ -38,10 +39,9 @@ class ArtistDetailPage extends StatelessWidget {
       tertiaryContentTitle: "专辑",
       tertiaryContent: artist.albumsMap.values.toList(),
       tertiaryContentBuilder: (context, album, i, multiSelectController) =>
-          ListTile(
+          CpListTile(
         onTap: () => context.push(app_paths.ALBUM_DETAIL_PAGE, extra: album),
         title: Text(album.name),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       ),
       enableShufflePlay: true,
       enableSortMethod: true,
@@ -69,7 +69,7 @@ class ArtistDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.title.localeCompareTo(b.title));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.title.localeCompareTo(a.title));
                 break;
             }
@@ -83,7 +83,7 @@ class ArtistDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.album.localeCompareTo(b.album));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.album.localeCompareTo(a.album));
                 break;
             }
@@ -97,7 +97,7 @@ class ArtistDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.created.compareTo(b.created));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.created.compareTo(a.created));
                 break;
             }
@@ -111,7 +111,7 @@ class ArtistDetailPage extends StatelessWidget {
               case SortOrder.ascending:
                 list.sort((a, b) => a.modified.compareTo(b.modified));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.modified.compareTo(a.modified));
                 break;
             }

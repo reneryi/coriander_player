@@ -1,21 +1,21 @@
 import 'dart:io';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/build_index_state_view.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/lyric/lyric_source.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/build_index_state_view.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/lyric/lyric_source.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import 'package:coriander_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/app_paths.dart' as app_paths;
 
 ({String title, String subtitle}) parseFolderDisplay(String absolutePath) {
   final segments = absolutePath
@@ -102,7 +102,7 @@ class _FoldersPageState extends State<FoldersPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.path.localeCompareTo(b.path));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.path.localeCompareTo(a.path));
                 break;
             }
@@ -116,7 +116,7 @@ class _FoldersPageState extends State<FoldersPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.modified.compareTo(b.modified));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.modified.compareTo(a.modified));
                 break;
             }
@@ -130,7 +130,7 @@ class _FoldersPageState extends State<FoldersPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.audios.length.compareTo(b.audios.length));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.audios.length.compareTo(a.audios.length));
                 break;
             }
@@ -218,7 +218,7 @@ class _FolderLibraryManagerDialogState
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) {
                               return const Center(
-                                child: Text("Fail to get app data dir."),
+                                child: Text("无法获取应用数据目录。"),
                               );
                             }
 
@@ -312,6 +312,7 @@ class AudioFolderTile extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
+            enableFeedback: false,
             borderRadius: BorderRadius.circular(surfaces.radiusLg),
             onTap: () => context.push(
               app_paths.FOLDER_DETAIL_PAGE,
@@ -358,7 +359,7 @@ class AudioFolderTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '更新于 ${modified.toLocal()} · ${audioFolder.audios.length} 首歌曲',
+                        '更新亀${modified.toLocal()} · ${audioFolder.audios.length} 首歌曀',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -401,6 +402,7 @@ class _CompactAudioFolderTile extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
+            enableFeedback: false,
             borderRadius: BorderRadius.circular(surfaces.radiusLg),
             onTap: () => context.push(
               app_paths.FOLDER_DETAIL_PAGE,

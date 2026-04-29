@@ -1,12 +1,12 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:math';
 
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/lyric/krc.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/lyric/qrc.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/lyric/krc.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/lyric/qrc.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:music_api/music_api.dart';
 
 enum ResultSource { qq, kugou, netease }
@@ -138,8 +138,8 @@ class SongSearchResult {
   }
 }
 
-/// 统一搜索：分别从酷狗、网易云、QQ音乐搜索，每个 API 独立 try-catch，
-/// 避免某个 API 失败导致全部搜索结果为空。
+/// 统一搜索：分别从酷狗、网易云、QQ闊充箰鎼滅储锛屾瘡涓?API 独立 try-catch锛?
+/// 閬垮厤鏌愪釜 API 澶辫触瀵艰嚧鍏ㄩ儴鎼滅储缁撴灉涓虹┖銆?
 Future<List<SongSearchResult>> uniSearch(Audio audio) async {
   final query = audio.title;
   List<SongSearchResult> result = [];
@@ -177,7 +177,7 @@ Future<List<SongSearchResult>> uniSearch(Audio audio) async {
       }
     }
   } catch (err, trace) {
-    LOGGER.e("网易云搜索失败 query: $query", error: err, stackTrace: trace);
+    LOGGER.e("网易云搜索失贀query: $query", error: err, stackTrace: trace);
   }
 
   // QQ音乐搜索

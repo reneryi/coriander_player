@@ -1,12 +1,12 @@
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/build_index_state_view.dart';
-import 'package:coriander_player/component/settings_tile.dart';
-import 'package:coriander_player/hotkeys_helper.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/lyric/lyric_source.dart';
-import 'package:coriander_player/play_service/play_service.dart';
+﻿import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/build_index_state_view.dart';
+import 'package:qisheng_player/component/settings_tile.dart';
+import 'package:qisheng_player/hotkeys_helper.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/lyric/lyric_source.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -148,7 +148,7 @@ class _AudioLibraryEditorDialogState extends State<AudioLibraryEditorDialog> {
                           builder: (context, snapshot) {
                             if (snapshot.data == null) {
                               return const Center(
-                                child: Text("Fail to get app data dir."),
+                                child: Text("无法获取应用数据目录。"),
                               );
                             }
 
@@ -333,7 +333,7 @@ class _HotkeySettingsDialogState extends State<_HotkeySettingsDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                "提示：支持后台快捷键（系统级），但后台不响应播放/暂停、桌面歌词开关、返回上一页、退出程序。",
+                "提示：支持后台快捷键（系统级），但后台不响应播放/暂停、桌面歌词开关、返回、前进、退出程序。",
                 style: TextStyle(color: scheme.onSurface),
               ),
               const SizedBox(height: 12),

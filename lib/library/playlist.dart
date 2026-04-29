@@ -1,12 +1,12 @@
-// ignore_for_file: non_constant_identifier_names
+﻿// ignore_for_file: non_constant_identifier_names
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/utils.dart';
 
 List<Playlist> PLAYLISTS = [];
 Timer? _playlistSaveDebounce;

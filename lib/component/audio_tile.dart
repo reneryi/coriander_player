@@ -1,27 +1,29 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/cp/cp_components.dart';
-import 'package:coriander_player/component/scroll_aware_future_builder.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/audio_metadata_override_store.dart';
-import 'package:coriander_player/library/online_cover_store.dart';
-import 'package:coriander_player/library/play_count_store.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/lyric/lyric_source.dart';
-import 'package:coriander_player/music_matcher.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/src/rust/api/tag_reader.dart' as tag_writer;
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/cp/cp_components.dart';
+import 'package:qisheng_player/component/scroll_aware_future_builder.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/audio_metadata_override_store.dart';
+import 'package:qisheng_player/library/online_cover_store.dart';
+import 'package:qisheng_player/library/play_count_store.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/lyric/lyric_source.dart';
+import 'package:qisheng_player/music_matcher.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/src/rust/api/tag_reader.dart' as tag_writer;
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:provider/provider.dart';
 
 /// 展示 `playlist[audioIndex]` 对应的歌曲条目。
-/// 可通过 [leading]/[action] 注入额外前后缀组件。
+/// 可通过 [leading]/[action] 注入额外的前后缀组件。
 class AudioTile extends StatelessWidget {
   const AudioTile({
     super.key,
@@ -42,11 +44,19 @@ class AudioTile extends StatelessWidget {
   final Widget? action;
   final MultiSelectController? multiSelectController;
 
+  PlaybackController _resolvePlaybackController(BuildContext context) {
+    try {
+      return context.read<PlaybackController>();
+    } catch (_) {
+      return PlayService.instance.playbackService;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final audio = playlist[audioIndex];
-    final playbackService = PlayService.instance.playbackService;
+    final playbackService = _resolvePlaybackController(context);
 
     return ListenableBuilder(
       listenable: playbackService,
@@ -198,135 +208,175 @@ class AudioTile extends StatelessWidget {
             final selected =
                 multiSelectController?.selected.contains(audio) == true;
 
+            final rowRadius = BorderRadius.circular(14.0);
             return SizedBox(
               height: 64.0,
-              child: CpMotionPressable(
-                borderRadius: BorderRadius.circular(12.0),
-                selected: effectiveFocus || selected,
-                hoverScale: 1.008,
-                pressScale: 0.992,
-                hoverShadow: true,
-                selectedGlow: true,
-                hoverShadowOpacity: 0.11,
-                selectedGlowOpacity: effectiveFocus ? 0.16 : 0.1,
-                onTap: () {
-                  if (controller.isOpen) {
-                    controller.close();
-                    return;
-                  }
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.018),
+                    borderRadius: rowRadius,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.045),
+                    ),
+                  ),
+                  child: CpMotionPressable(
+                    borderRadius: rowRadius,
+                    selected: effectiveFocus || selected,
+                    hoverScale: 1.008,
+                    pressScale: 0.992,
+                    hoverShadow: true,
+                    selectedGlow: true,
+                    hoverShadowOpacity: 0.11,
+                    selectedGlowOpacity: effectiveFocus ? 0.16 : 0.1,
+                    onTap: () {
+                      if (controller.isOpen) {
+                        controller.close();
+                        return;
+                      }
 
-                  if (multiSelectController == null ||
-                      !multiSelectController!.enableMultiSelectView) {
-                    PlayService.instance.playbackService
-                        .play(audioIndex, playlist);
-                  } else {
-                    multiSelectController!.toggleSelectionWithIndex(
-                      index: audioIndex,
-                      item: audio,
-                      items: playlist,
-                      shiftPressed: MultiSelectController.isShiftPressed(),
-                    );
-                  }
-                },
-                onSecondaryTapDown: (details) {
-                  if (multiSelectController?.enableMultiSelectView == true) {
-                    return;
-                  }
-                  controller.open(
-                    position: details.localPosition.translate(0, -240),
-                  );
-                },
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  children: [
-                    if (leading != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: leading!,
-                      ),
-                    ScrollAwareFutureBuilder(
-                      futureKey: audio.path,
-                      future: () => audio.cover,
-                      builder: (context, snapshot) {
-                        if (snapshot.data == null) {
-                          return RepaintBoundary(
-                            child: SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: Center(child: placeholder),
-                            ),
-                          );
-                        }
-
-                        return RepaintBoundary(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10.0),
-                            child: Image(
-                              image: snapshot.data!,
-                              width: 48.0,
-                              height: 48.0,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => placeholder,
-                            ),
-                          ),
+                      if (multiSelectController == null ||
+                          !multiSelectController!.enableMultiSelectView) {
+                        PlayService.instance.playbackService
+                            .play(audioIndex, playlist);
+                      } else {
+                        multiSelectController!.toggleSelectionWithIndex(
+                          index: audioIndex,
+                          item: audio,
+                          items: playlist,
+                          shiftPressed: MultiSelectController.isShiftPressed(),
                         );
-                      },
-                    ),
-                    const SizedBox(width: 16.0),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            audio.title,
-                            style: TextStyle(color: textColor, fontSize: 16),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                      }
+                    },
+                    onSecondaryTapDown: (details) {
+                      if (multiSelectController?.enableMultiSelectView ==
+                          true) {
+                        return;
+                      }
+                      controller.open(
+                        position: details.localPosition.translate(0, -240),
+                      );
+                    },
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        if (leading != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 16.0),
+                            child: leading!,
                           ),
-                          const SizedBox(width: 4.0),
-                          Text(
-                            showPlayCount
-                                ? "${audio.artist} - ${audio.album} | ${audio.qualitySummary} | 播放 ${PlayCountStore.instance.get(audio)} 次"
-                                : "${audio.artist} - ${audio.album} | ${audio.qualitySummary}",
-                            style: TextStyle(color: textColor),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8.0),
-                    Text(
-                      Duration(seconds: audio.duration).toStringHMMSS(),
-                      style: TextStyle(
-                        color:
-                            effectiveFocus ? scheme.primary : scheme.onSurface,
-                      ),
-                    ),
-                    if (multiSelectController?.enableMultiSelectView == true)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Checkbox(
-                          value:
-                              multiSelectController!.selected.contains(audio),
-                          onChanged: (_) {
-                            multiSelectController!.toggleSelectionWithIndex(
-                              index: audioIndex,
-                              item: audio,
-                              items: playlist,
-                              shiftPressed:
-                                  MultiSelectController.isShiftPressed(),
+                        ScrollAwareFutureBuilder(
+                          futureKey: audio.path,
+                          future: () => audio.cover,
+                          builder: (context, snapshot) {
+                            if (snapshot.data == null) {
+                              return RepaintBoundary(
+                                child: SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: Center(child: placeholder),
+                                ),
+                              );
+                            }
+
+                            return RepaintBoundary(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10.0),
+                                child: Image(
+                                  image: snapshot.data!,
+                                  width: 48.0,
+                                  height: 48.0,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => placeholder,
+                                ),
+                              ),
                             );
                           },
                         ),
-                      ),
-                    if (action != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: action!,
-                      ),
-                  ],
+                        const SizedBox(width: 16.0),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                audio.title,
+                                style:
+                                    TextStyle(color: textColor, fontSize: 16),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(width: 4.0),
+                              Text(
+                                showPlayCount
+                                    ? "${audio.artist} - ${audio.album} | ${audio.qualitySummary} | 播放 ${PlayCountStore.instance.get(audio)} 次"
+                                    : "${audio.artist} - ${audio.album} | ${audio.qualitySummary}",
+                                style: TextStyle(color: textColor),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8.0),
+                        SizedBox(
+                          width: 176,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                Duration(seconds: audio.duration)
+                                    .toStringHMMSS(),
+                                style: TextStyle(
+                                  color: effectiveFocus
+                                      ? scheme.primary
+                                      : scheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(width: 8.0),
+                              IconButton(
+                                tooltip: '更多',
+                                onPressed: () => controller.open(),
+                                icon: const Icon(Symbols.more_vert),
+                                color: textColor.withValues(alpha: 0.76),
+                                visualDensity: VisualDensity.compact,
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size(36, 36),
+                                  padding: EdgeInsets.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (multiSelectController?.enableMultiSelectView ==
+                            true)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Checkbox(
+                              value: multiSelectController!.selected
+                                  .contains(audio),
+                              onChanged: (_) {
+                                multiSelectController!.toggleSelectionWithIndex(
+                                  index: audioIndex,
+                                  item: audio,
+                                  items: playlist,
+                                  shiftPressed:
+                                      MultiSelectController.isShiftPressed(),
+                                );
+                              },
+                            ),
+                          ),
+                        if (action != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: action!,
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             );
@@ -355,7 +405,7 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
       uniSearch(widget.audio);
   bool _busy = false;
 
-  /// 保存标签覆盖到 JSON 文件，并同步更新 index.json 使修改持久化
+  /// 淇濆瓨鏍囩瑕嗙洊鍒?JSON 文件，并同步更新 index.json 浣夸慨鏀规寔涔呭寲
   Future<void> _saveOverride() async {
     final title = titleController.text.trim();
     final artist = artistController.text.trim();
@@ -377,7 +427,7 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
         album: album,
       );
 
-      // 直接写入音乐文件的元数据标签（非 CUE 轨道）
+      // 直接写入音乐文件的元数据标签（非 CUE 轨道）。
       if (!widget.audio.isCueTrack) {
         final wrote = await tag_writer.writeTagToFile(
           path: widget.audio.path,
@@ -390,7 +440,7 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
         }
       }
 
-      // 同步更新 index.json，使修改在重启/重建索引后依然保留
+      // 同步更新 index.json，使修改在重启或重建索引后依然保留。
       await _updateIndexJson(widget.audio, title, artist, album);
 
       AudioLibrary.instance.rebuildCollectionsFromCurrentFolders();
@@ -414,7 +464,7 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
     }
   }
 
-  /// 更新 index.json 中对应音频的元数据
+  /// 更新 index.json 中对应音频的元数据。
   Future<void> _updateIndexJson(
     Audio audio,
     String title,
@@ -430,7 +480,7 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
       final Map indexJson = json.decode(indexStr);
       final List folders = indexJson["folders"] ?? [];
 
-      // 在 index.json 中查找并更新匹配的音频条目
+      // 在 index.json 中查找并更新匹配的音频条目。
       bool found = false;
       for (final folder in folders) {
         final List audios = folder["audios"] ?? [];
@@ -454,7 +504,7 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
     }
   }
 
-  /// 设置在线歌词来源，保存后刷新正在播放的歌词
+  /// 设置在线歌词来源，保存后刷新正在播放的歌词。
   Future<void> _applyLyricSource(SongSearchResult result) async {
     final source = switch (result.source) {
       ResultSource.qq => LyricSourceType.qq,
@@ -500,16 +550,16 @@ class _AudioEditDialogState extends State<_AudioEditDialog> {
       showTextOnSnackBar("在线封面应用失败");
       return;
     }
-    // 清除封面缓存并通知播放服务刷新 UI
+    // 清除封面缓存并通知播放服务刷新 UI。
     widget.audio.clearCoverCache();
 
-    // 将封面写入音乐文件的元数据标签（非 CUE 轨道）
+    // 将封面写入音乐文件的元数据标签（非 CUE 轨道）。
     if (!widget.audio.isCueTrack) {
       try {
-        // 从 setCoverFromUrl 返回的缓存路径读取封面数据
+        // 从 setCoverFromUrl 返回的缓存路径读取封面数据。
         final supportPath = (await getAppDataDir()).path;
         final coverDir = "$supportPath\\cover_cache";
-        // 使用与 OnlineCoverStore 相同的命名规则找到缓存文件
+        // 使用与 OnlineCoverStore 相同的命名规则找到缓存文件。
         final cacheBytes = utf8.encode(widget.audio.path);
         final cacheNameBuilder = StringBuffer();
         for (final item in cacheBytes) {

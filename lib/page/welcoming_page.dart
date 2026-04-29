@@ -1,11 +1,13 @@
 import 'dart:async';
 
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/build_index_state_view.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/build_index_state_view.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/app_brand.dart';
+import 'package:qisheng_player/component/window_drag_region.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:filepicker_windows/filepicker_windows.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -105,7 +107,7 @@ class _FolderSelectorViewState extends State<FolderSelectorView> {
                 builder: (context, snapshot) {
                   if (snapshot.data == null) {
                     return const Center(
-                      child: Text("Fail to get app data dir."),
+                      child: Text("无法获取应用数据目录。"),
                     );
                   }
 
@@ -196,7 +198,7 @@ class _TitleBar extends StatelessWidget {
         variant: AppSurfaceVariant.glass,
         radius: 24,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: DragToMoveArea(
+        child: WindowDragRegion(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -209,7 +211,7 @@ class _TitleBar extends StatelessWidget {
                       child: Image.asset("app_icon.ico", width: 24, height: 24),
                     ),
                     Text(
-                      "Coriander Player",
+                      AppBrand.displayName,
                       style: TextStyle(color: scheme.onSurface, fontSize: 16),
                     ),
                   ],

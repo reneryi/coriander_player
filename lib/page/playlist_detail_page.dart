@@ -1,10 +1,10 @@
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/component/audio_tile.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/page/uni_page_components.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/component/audio_tile.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/page/uni_page_components.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -43,7 +43,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage> {
     return UniPage<Audio>(
       pref: AppPreference.instance.playlistDetailPagePref,
       title: widget.playlist.name,
-      subtitle: "${contentList.length} 首乐曲",
+      subtitle: "${contentList.length} 首乐曀",
       contentList: contentList,
       contentBuilder: (context, item, i, multiSelectController) => AudioTile(
         audioIndex: i,
@@ -99,7 +99,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.title.localeCompareTo(b.title));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.title.localeCompareTo(a.title));
                 break;
             }
@@ -113,7 +113,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.artist.localeCompareTo(b.artist));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.artist.localeCompareTo(a.artist));
                 break;
             }
@@ -127,7 +127,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.album.localeCompareTo(b.album));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.album.localeCompareTo(a.album));
                 break;
             }
@@ -141,7 +141,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.created.compareTo(b.created));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.created.compareTo(a.created));
                 break;
             }
@@ -155,7 +155,7 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage> {
               case SortOrder.ascending:
                 list.sort((a, b) => a.modified.compareTo(b.modified));
                 break;
-              case SortOrder.decending:
+              case SortOrder.descending:
                 list.sort((a, b) => b.modified.compareTo(a.modified));
                 break;
             }
@@ -200,7 +200,7 @@ class _MoveSelectionToPlaylistAction extends StatelessWidget {
                 }
                 currentPlaylist.applyCustomOrder(contentList);
                 showTextOnSnackBar(
-                  "已移动${multiSelectController.selected.length}首到“${targetPlaylist.name}”",
+                  "已移动 ${multiSelectController.selected.length} 首到“${targetPlaylist.name}”",
                 );
                 multiSelectController.useMultiSelectView(false);
               },

@@ -11,6 +11,7 @@ class NowPlayingMoreMenuAction extends StatelessWidget {
 
     if (nowPlaying == null) {
       return IconButton(
+        enableFeedback: false,
         tooltip: '更多',
         onPressed: null,
         icon: const Icon(Symbols.more_vert),
@@ -125,7 +126,8 @@ class NowPlayingMoreMenuAction extends StatelessWidget {
         ),
         MenuItemButton(
           onPressed: () {
-            context.pushReplacement(app_paths.AUDIO_DETAIL_PAGE, extra: nowPlaying);
+            context.pushReplacement(app_paths.AUDIO_DETAIL_PAGE,
+                extra: nowPlaying);
           },
           leadingIcon: const Icon(Symbols.info),
           child: const Text("详细信息"),
@@ -174,6 +176,7 @@ class NowPlayingMoreMenuAction extends StatelessWidget {
         ),
       ],
       builder: (context, controller, _) => IconButton(
+        enableFeedback: false,
         tooltip: '更多',
         onPressed: () {
           if (controller.isOpen) {
@@ -200,7 +203,8 @@ class NowPlayingDesktopLyricAction extends StatelessWidget {
         return FutureBuilder(
           future: desktopLyricService.desktopLyric,
           builder: (context, snapshot) => IconButton(
-            tooltip: "桌面歌词；现在：${snapshot.data == null ? "禁用" : "启用"}",
+            enableFeedback: false,
+            tooltip: "桌面歌词：${snapshot.data == null ? "已关闭" : "已开启"}",
             onPressed: !desktopLyricService.isStarting &&
                     snapshot.connectionState == ConnectionState.done
                 ? snapshot.data == null

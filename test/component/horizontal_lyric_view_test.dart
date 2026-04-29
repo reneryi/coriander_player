@@ -1,5 +1,5 @@
-import 'package:coriander_player/component/horizontal_lyric_view.dart';
-import 'package:coriander_player/lyric/lrc.dart';
+﻿import 'package:qisheng_player/component/horizontal_lyric_view.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,8 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/page/now_playing_page/component/lyric_source_view.dart';
-import 'package:coriander_player/play_service/play_service.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_controls_visibility.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_source_view.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
@@ -75,27 +76,33 @@ class LyricViewControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(8.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          SetLyricSourceBtn(),
-          SizedBox(height: 8.0),
-          _LyricAlignSwitchBtn(),
-          SizedBox(height: 8.0),
-          _TranslationSwitchBtn(),
-          SizedBox(height: 8.0),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _IncreaseFontSizeBtn(),
-              SizedBox(width: 8.0),
-              _DecreaseFontSizeBtn(),
-            ],
-          )
-        ],
+    final visibilityController =
+        context.read<LyricControlsVisibilityController>();
+    return MouseRegion(
+      onEnter: (_) => visibilityController.setControlsHovered(true),
+      onExit: (_) => visibilityController.setControlsHovered(false),
+      child: const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            SetLyricSourceBtn(),
+            SizedBox(height: 8.0),
+            _LyricAlignSwitchBtn(),
+            SizedBox(height: 8.0),
+            _TranslationSwitchBtn(),
+            SizedBox(height: 8.0),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _IncreaseFontSizeBtn(),
+                SizedBox(width: 8.0),
+                _DecreaseFontSizeBtn(),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
@@ -110,6 +117,7 @@ class _LyricAlignSwitchBtn extends StatelessWidget {
     final lyricViewController = context.watch<LyricViewController>();
 
     return IconButton(
+      enableFeedback: false,
       onPressed: lyricViewController.switchLyricTextAlign,
       tooltip: "切换歌词对齐方向",
       color: scheme.onSecondaryContainer,
@@ -131,6 +139,7 @@ class _IncreaseFontSizeBtn extends StatelessWidget {
     final lyricViewController = context.watch<LyricViewController>();
 
     return IconButton(
+      enableFeedback: false,
       onPressed: lyricViewController.increaseFontSize,
       tooltip: "增大歌词字体",
       color: scheme.onSecondaryContainer,
@@ -148,6 +157,7 @@ class _TranslationSwitchBtn extends StatelessWidget {
     final lyricViewController = context.watch<LyricViewController>();
 
     return IconButton(
+      enableFeedback: false,
       onPressed: lyricViewController.toggleShowTranslation,
       tooltip: lyricViewController.showTranslation ? "隐藏翻译" : "显示翻译",
       color: scheme.onSecondaryContainer,
@@ -169,6 +179,7 @@ class _DecreaseFontSizeBtn extends StatelessWidget {
     final lyricViewController = context.watch<LyricViewController>();
 
     return IconButton(
+      enableFeedback: false,
       onPressed: lyricViewController.decreaseFontSize,
       tooltip: "减小歌词字体",
       color: scheme.onSecondaryContainer,

@@ -1,20 +1,14 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/navigation_state.dart';
-import 'package:coriander_player/page/uni_page.dart';
-import 'package:coriander_player/page/uni_page_components.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/component/cp/cp_components.dart';
+import 'package:qisheng_player/navigation_state.dart';
+import 'package:qisheng_player/page/page_scaffold.dart';
+import 'package:qisheng_player/page/uni_page.dart';
+import 'package:qisheng_player/page/uni_page_components.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-/// `ArtistDetailPage`, `AlbumDetailPage` 页面的主要组件。
-///
-/// `P`: 第一内容；`S`: 第二内容（主要）；`T`: 第三内容
-///
-/// 例如：对于 `ArtistDetailPage` 来说，
-/// `P` 是 `Artist` 类，`S` 是 `Audio` 类，`T` 是 `Album` 类
-///
-/// `multiSelectController` 可以使页面进入多选状态。如果它不为空，则 `multiSelectViewActions` 也不可为空
 class UniDetailPage<P, S, T> extends StatefulWidget {
   const UniDetailPage({
     super.key,
@@ -41,35 +35,23 @@ class UniDetailPage<P, S, T> extends StatefulWidget {
   });
 
   final PagePreference pref;
-
   final P primaryContent;
-
-  /// 用来展示内容图片，较高清
   final Future<ImageProvider?> primaryPic;
   final String? primaryPicHeroTag;
-
-  /// 当作毛玻璃的背景，较模糊
   final Future<ImageProvider?> backgroundPic;
-
   final PicShape picShape;
-
   final String title;
   final String subtitle;
-
   final List<S> secondaryContent;
   final ContentBuilder<S> secondaryContentBuilder;
-
   final String tertiaryContentTitle;
   final List<T> tertiaryContent;
   final ContentBuilder<T> tertiaryContentBuilder;
-
   final bool enableShufflePlay;
   final bool enableSortMethod;
   final bool enableSortOrder;
   final bool enableSecondaryContentViewSwitch;
-
   final List<SortMethodDesc<S>>? sortMethods;
-
   final MultiSelectController<S>? multiSelectController;
   final List<Widget>? multiSelectViewActions;
 
@@ -120,73 +102,109 @@ class _UniDetailPageState<P, S, T> extends State<UniDetailPage<P, S, T>> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    final List<Widget> actions = [];
+    final actions = <Widget>[];
     if (widget.enableShufflePlay) {
       actions.add(ShufflePlay<S>(contentList: widget.secondaryContent));
     }
     if (widget.enableSortMethod) {
-      actions.add(SortMethodComboBox<S>(
-        sortMethods: widget.sortMethods!,
-        contentList: widget.secondaryContent,
-        currSortMethod: currSortMethod!,
-        setSortMethod: setSortMethod,
-      ));
+      actions.add(
+        SortMethodComboBox<S>(
+          sortMethods: widget.sortMethods!,
+          contentList: widget.secondaryContent,
+          currSortMethod: currSortMethod!,
+          setSortMethod: setSortMethod,
+        ),
+      );
     }
     if (widget.enableSortOrder) {
-      actions.add(SortOrderSwitch<S>(
-        sortOrder: currSortOrder,
-        setSortOrder: setSortOrder,
-      ));
+      actions.add(
+        SortOrderSwitch<S>(
+          sortOrder: currSortOrder,
+          setSortOrder: setSortOrder,
+        ),
+      );
     }
     if (widget.enableSecondaryContentViewSwitch) {
-      actions.add(ContentViewSwitch<S>(
-        contentView: currContentView,
-        setContentView: setContentView,
-      ));
+      actions.add(
+        ContentViewSwitch<S>(
+          contentView: currContentView,
+          setContentView: setContentView,
+        ),
+      );
     }
 
     return widget.multiSelectController == null
-        ? result(null, actions, scheme)
+        ? _buildPage(context, null, actions)
         : ListenableBuilder(
             listenable: widget.multiSelectController!,
-            builder: (context, _) => result(
+            builder: (context, _) => _buildPage(
+              context,
               widget.multiSelectController!,
               actions,
-              scheme,
             ),
           );
   }
 
-  Widget result(MultiSelectController<S>? multiSelectController,
-      List<Widget> actions, ColorScheme scheme) {
-    return ColoredBox(
-      color: scheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // head
-            _UniDetailPageHeader(
+  Widget _buildPage(
+    BuildContext context,
+    MultiSelectController<S>? multiSelectController,
+    List<Widget> actions,
+  ) {
+    Widget? primaryAction;
+    var secondaryActions = <Widget>[...actions];
+    if (multiSelectController != null) {
+      if (multiSelectController.enableMultiSelectView) {
+        final multiSelectActions =
+            widget.multiSelectViewActions ?? const <Widget>[];
+        primaryAction =
+            multiSelectActions.isNotEmpty ? multiSelectActions.first : null;
+        secondaryActions = multiSelectActions.length > 1
+            ? multiSelectActions.sublist(1)
+            : <Widget>[];
+      } else {
+        secondaryActions = [
+          ...secondaryActions,
+          IconButton.filledTonal(
+            tooltip: '更多',
+            onPressed: () {
+              multiSelectController.useMultiSelectView(true);
+              multiSelectController.clear();
+            },
+            icon: const Icon(Icons.checklist),
+          ),
+        ];
+      }
+    }
+
+    return PageScaffold(
+      title: widget.title,
+      subtitle: widget.subtitle,
+      primaryAction: primaryAction,
+      secondaryActions: secondaryActions,
+      body: Column(
+        children: [
+          CpSurface(
+            key: const ValueKey('uni-detail-hero-surface'),
+            tone: CpSurfaceTone.floating,
+            child: _UniDetailPageHeader(
               pic: widget.primaryPic,
               backgroundPic: widget.backgroundPic,
               picShape: widget.picShape,
               heroTag: widget.primaryPicHeroTag,
               title: widget.title,
               subtitle: widget.subtitle,
-              actions: actions,
-              multiSelectController: multiSelectController,
-              multiSelectViewActions: widget.multiSelectViewActions,
             ),
-            const SizedBox(height: 16.0),
-            Expanded(
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: CpSurface(
+              key: const ValueKey('uni-detail-content-surface'),
+              tone: CpSurfaceTone.panel,
+              padding: const EdgeInsets.all(12),
               child: Material(
-                borderRadius: BorderRadius.circular(8.0),
                 type: MaterialType.transparency,
                 child: CustomScrollView(
                   slivers: [
-                    // secondary content
                     switch (currContentView) {
                       ContentView.list => SliverFixedExtentList.builder(
                           itemExtent: 64,
@@ -211,38 +229,39 @@ class _UniDetailPageState<P, S, T> extends State<UniDetailPage<P, S, T>> {
                           ),
                         ),
                     },
-
-                    // tertiary content
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.fromLTRB(8, 18, 8, 10),
                         child: Text(
                           widget.tertiaryContentTitle,
-                          style: TextStyle(
-                            color: scheme.onSurface,
-                            fontSize: 18.0,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
                     SliverList.builder(
                       itemCount: widget.tertiaryContent.length,
-                      itemBuilder: (context, i) =>
-                          widget.tertiaryContentBuilder(
-                        context,
-                        widget.tertiaryContent[i],
-                        i,
-                        null,
+                      itemBuilder: (context, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: widget.tertiaryContentBuilder(
+                          context,
+                          widget.tertiaryContent[i],
+                          i,
+                          null,
+                        ),
                       ),
                     ),
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 96.0)),
+                    const SliverPadding(
+                      padding: EdgeInsets.only(bottom: 32),
+                    ),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -258,155 +277,218 @@ class _UniDetailPageHeader extends StatelessWidget {
     this.heroTag,
     required this.title,
     required this.subtitle,
-    this.multiSelectController,
-    required this.actions,
-    this.multiSelectViewActions,
   });
 
   final Future<ImageProvider?> pic;
   final Future<ImageProvider?> backgroundPic;
   final PicShape picShape;
   final String? heroTag;
-
   final String title;
   final String subtitle;
-  final MultiSelectController? multiSelectController;
-  final List<Widget> actions;
-  final List<Widget>? multiSelectViewActions;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final brightness = theme.brightness;
+    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
-      height: 200,
+      height: 220,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          FutureBuilder(
+          FutureBuilder<ImageProvider?>(
             future: backgroundPic,
             builder: (context, snapshot) {
-              if (snapshot.data == null) return const SizedBox.shrink();
-
+              final image = snapshot.data;
+              if (image == null) {
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        scheme.primary.withValues(alpha: 0.18),
+                        scheme.surfaceContainerHighest.withValues(alpha: 0.72),
+                      ],
+                    ),
+                  ),
+                );
+              }
               return Image(
-                image: snapshot.data!,
+                image: image,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink(),
               );
             },
           ),
-          switch (brightness) {
-            Brightness.dark => const ColoredBox(color: Colors.black38),
-            Brightness.light => const ColoredBox(color: Colors.white30),
-          },
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.12),
+                  scheme.surface.withValues(alpha: 0.28),
+                ],
+              ),
+            ),
+          ),
           BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
             child: const ColoredBox(color: Colors.transparent),
           ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              FutureBuilder(
-                future: pic,
-                builder: (context, snapshot) {
-                  final placeholder = Icon(
-                    Symbols.broken_image,
-                    size: 200.0,
-                    color: scheme.onSurface,
-                  );
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const SizedBox(
-                      width: 200,
-                      height: 200,
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                  if (snapshot.data == null) return placeholder;
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 760;
+              final artworkSize = compact ? 104.0 : 132.0;
+              final artwork = _HeaderArtwork(
+                pic: pic,
+                picShape: picShape,
+                heroTag: heroTag,
+                size: artworkSize,
+              );
 
-                  final artwork = switch (picShape) {
-                    PicShape.oval => ClipOval(
-                        child: Image(
-                          image: snapshot.data!,
-                          width: 200.0,
-                          height: 200.0,
-                          errorBuilder: (_, __, ___) => placeholder,
-                        ),
-                      ),
-                    PicShape.rrect => ClipRRect(
-                        borderRadius: BorderRadius.circular(8.0),
-                        child: Image(
-                          image: snapshot.data!,
-                          width: 200.0,
-                          height: 200.0,
-                          errorBuilder: (_, __, ___) => placeholder,
-                        ),
-                      ),
-                  };
-                  final tag = heroTag;
-                  if (tag == null) return artwork;
-
-                  return ValueListenableBuilder<AlbumArtworkHeroTransition?>(
-                    valueListenable:
-                        AppNavigationState.instance.albumArtworkHeroTransition,
-                    child: artwork,
-                    builder: (context, _, child) {
-                      final navigation = AppNavigationState.instance;
-                      if (!navigation.canBuildAlbumArtworkHero(tag: tag)) {
-                        return child!;
-                      }
-
-                      return Hero(
-                        tag: tag,
-                        transitionOnUserGestures: true,
-                        child: child!,
-                      );
-                    },
-                  );
-                },
-              ),
-              const SizedBox(width: 16.0),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 22.0,
-                          color: scheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              final textBlock = Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: compact
+                    ? CrossAxisAlignment.center
+                    : CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: compact ? TextAlign.center : TextAlign.start,
+                    style: TextStyle(
+                      color: scheme.onSurface,
+                      fontSize: compact ? 22 : 28,
+                      fontWeight: FontWeight.w800,
+                      height: 1.05,
                     ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 14.0,
-                        color: scheme.onSurface,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: compact ? TextAlign.center : TextAlign.start,
+                    style: TextStyle(
+                      color: scheme.onSurface.withValues(alpha: 0.78),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(height: 8.0),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children: multiSelectController == null
-                          ? actions
-                          : multiSelectController!.enableMultiSelectView
-                              ? multiSelectViewActions!
-                              : actions,
-                    )
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                ],
+              );
+
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: compact
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          artwork,
+                          const SizedBox(height: 16),
+                          textBlock,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          artwork,
+                          const SizedBox(width: 20),
+                          Expanded(child: textBlock),
+                        ],
+                      ),
+              );
+            },
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HeaderArtwork extends StatelessWidget {
+  const _HeaderArtwork({
+    required this.pic,
+    required this.picShape,
+    required this.heroTag,
+    required this.size,
+  });
+
+  final Future<ImageProvider?> pic;
+  final PicShape picShape;
+  final String? heroTag;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return FutureBuilder<ImageProvider?>(
+      future: pic,
+      builder: (context, snapshot) {
+        final placeholder = Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(
+                picShape == PicShape.oval ? size / 2 : 22),
+            color: Colors.white.withValues(alpha: 0.08),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Symbols.broken_image,
+            size: size * 0.42,
+            color: scheme.onSurface.withValues(alpha: 0.7),
+          ),
+        );
+        if (snapshot.connectionState != ConnectionState.done) {
+          return placeholder;
+        }
+
+        final imageProvider = snapshot.data;
+        if (imageProvider == null) return placeholder;
+
+        final artwork = switch (picShape) {
+          PicShape.oval => ClipOval(
+              child: Image(
+                image: imageProvider,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => placeholder,
+              ),
+            ),
+          PicShape.rrect => ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Image(
+                image: imageProvider,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => placeholder,
+              ),
+            ),
+        };
+
+        final tag = heroTag;
+        if (tag == null) return artwork;
+
+        return ValueListenableBuilder<AlbumArtworkHeroTransition?>(
+          valueListenable:
+              AppNavigationState.instance.albumArtworkHeroTransition,
+          child: artwork,
+          builder: (context, _, child) {
+            final navigation = AppNavigationState.instance;
+            if (!navigation.canBuildAlbumArtworkHero(tag: tag)) {
+              return child!;
+            }
+            return Hero(
+              tag: tag,
+              transitionOnUserGestures: true,
+              child: child!,
+            );
+          },
+        );
+      },
     );
   }
 }

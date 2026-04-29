@@ -1,11 +1,11 @@
-import 'dart:async';
+﻿import 'dart:async';
 
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/play_service/lyric_service.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/play_service/lyric_service.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -41,7 +41,7 @@ class HorizontalLyricView extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    "Enjoy Music",
+                    "开始播放音乐",
                     style: TextStyle(
                       color: scheme.onSecondaryContainer,
                       fontWeight: FontWeight.w700,
@@ -83,7 +83,7 @@ class _LyricHorizontalScrollAreaState
   late StreamSubscription lyricLineStreamSubscription;
   Timer? _pendingScrollTimer;
 
-  var currContent = "Enjoy Music";
+  var currContent = "开始播放音乐";
   var _scrollGeneration = 0;
 
   String _lineText(LyricLine line) {
@@ -91,13 +91,13 @@ class _LyricHorizontalScrollAreaState
         AppPreference.instance.nowPlayingPagePref.showTranslation;
     if (line is LrcLine) {
       if (showTranslation) return line.content;
-      return line.content.split("┃").first;
+      return line.content.split("─").first;
     }
     if (line is SyncLyricLine) {
       if (!showTranslation || line.translation == null) return line.content;
-      return "${line.content}┃${line.translation}";
+      return "${line.content}─${line.translation}";
     }
-    return "Enjoy Music";
+    return "开始播放音乐";
   }
 
   @override
@@ -157,7 +157,7 @@ class _LyricHorizontalScrollAreaState
     _scrollGeneration++;
     _pendingScrollTimer?.cancel();
     currContent = widget.lyric.lines.isEmpty
-        ? "Enjoy Music"
+        ? "开始播放音乐"
         : _lineText(widget.lyric.lines.first);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !scrollController.hasClients) return;

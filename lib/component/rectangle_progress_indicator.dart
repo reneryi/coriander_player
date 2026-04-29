@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:coriander_player/play_service/play_service.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
 import 'package:flutter/material.dart';
 
 class RectangleProgressIndicator extends StatefulWidget {
@@ -23,7 +23,7 @@ class RectangleProgressIndicator extends StatefulWidget {
 
 class _RectangleProgressIndicatorState
     extends State<RectangleProgressIndicator> {
-  /// [positionStream] 的订阅，在dispose取消订阅
+  /// [positionStream] 的订阅，在dispose鍙栨秷璁㈤槄
   late StreamSubscription<double> subscription;
 
   /// position / length, [0, 1]

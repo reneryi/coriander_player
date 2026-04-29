@@ -1,9 +1,9 @@
-import 'package:coriander_player/utils.dart';
+﻿import 'package:qisheng_player/utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('中文拼音与英文标题统一排序', () {
-    expect('稻dao香'.localeCompareTo('Love Story') < 0, isTrue);
+  test('涓枃鎷奸煶涓庤嫳鏂囨爣棰樼粺涓€鎺掑簭', () {
+    expect('稻dao首'.localeCompareTo('Love Story') < 0, isTrue);
     expect('光辉岁月'.localeCompareTo('Holiday') < 0, isTrue);
   });
 

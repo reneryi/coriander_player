@@ -78,7 +78,7 @@ List<String> _splitCreditNames(String? raw) {
   return raw
       .split(RegExp(AppSettings.instance.artistSplitPattern))
       .map((item) => item.trim())
-      .where((item) => item.isNotEmpty && item != 'UNKNOWN')
+      .where((item) => item.isNotEmpty && item != 'UNKNOWN' && item != '未知艺术家')
       .toList();
 }
 
@@ -86,13 +86,22 @@ List<_DashboardCreditEntry> _buildCreditEntries(Audio audio) {
   final entries = <_DashboardCreditEntry>[];
 
   for (final composer in _splitCreditNames(audio.composer)) {
-    entries.add(_DashboardCreditEntry(role: 'Composed by', name: composer));
+    entries.add(_DashboardCreditEntry(role: '作曲', name: composer));
   }
   for (final arranger in _splitCreditNames(audio.arranger)) {
-    entries.add(_DashboardCreditEntry(role: 'Arranged by', name: arranger));
+    entries.add(_DashboardCreditEntry(role: '编曲', name: arranger));
   }
 
   return entries;
+}
+
+String _buildArtistAlbumLine(Audio audio) {
+  final artist = audio.displayArtist;
+  final album = audio.displayAlbum;
+  if (!audio.hasKnownAlbum || album == artist || album == audio.displayTitle) {
+    return artist;
+  }
+  return '$artist · $album';
 }
 
 class _ImmersiveModeView extends StatelessWidget {
@@ -104,47 +113,57 @@ class _ImmersiveModeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding:
-          EdgeInsets.fromLTRB(compact ? 16 : 28, 12, compact ? 16 : 28, 24),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final stacked = compact ||
-              constraints.maxWidth < 1160 ||
-              MediaQuery.sizeOf(context).height < 760;
-          final gap = compact ? 24.0 : 32.0;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const Positioned.fill(
+          child: AbsorbPointer(
+            child: SizedBox.expand(),
+          ),
+        ),
+        Padding(
+          padding:
+              EdgeInsets.fromLTRB(compact ? 16 : 28, 12, compact ? 16 : 28, 24),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final stacked = compact ||
+                  constraints.maxWidth < 1160 ||
+                  MediaQuery.sizeOf(context).height < 760;
+              final gap = compact ? 24.0 : 32.0;
 
-          if (stacked) {
-            return Column(
-              children: [
-                const Expanded(
-                  flex: 4,
-                  child: _ImmersiveArtworkStage(compact: true),
-                ),
-                SizedBox(height: gap),
-                const Expanded(
-                  flex: 6,
-                  child: _ImmersiveLyricStage(compact: true),
-                ),
-              ],
-            );
-          }
+              if (stacked) {
+                return Column(
+                  children: [
+                    const Expanded(
+                      flex: 4,
+                      child: _ImmersiveArtworkStage(compact: true),
+                    ),
+                    SizedBox(height: gap),
+                    const Expanded(
+                      flex: 6,
+                      child: _ImmersiveLyricStage(compact: true),
+                    ),
+                  ],
+                );
+              }
 
-          return Row(
-            children: [
-              const Expanded(
-                flex: 4,
-                child: _ImmersiveArtworkStage(compact: false),
-              ),
-              SizedBox(width: gap),
-              const Expanded(
-                flex: 6,
-                child: _ImmersiveLyricStage(compact: false),
-              ),
-            ],
-          );
-        },
-      ),
+              return Row(
+                children: [
+                  const Expanded(
+                    flex: 4,
+                    child: _ImmersiveArtworkStage(compact: false),
+                  ),
+                  SizedBox(width: gap),
+                  const Expanded(
+                    flex: 6,
+                    child: _ImmersiveLyricStage(compact: false),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -227,7 +246,7 @@ class _DashboardHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pro Dashboard',
+          '专业面板',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -287,7 +306,7 @@ class _StudioMetadataStrip extends StatelessWidget {
   }
 }
 
-class _MetadataBadge extends StatelessWidget {
+class _MetadataBadge extends StatefulWidget {
   const _MetadataBadge({
     required this.icon,
     required this.label,
@@ -297,31 +316,63 @@ class _MetadataBadge extends StatelessWidget {
   final String label;
 
   @override
+  State<_MetadataBadge> createState() => _MetadataBadgeState();
+}
+
+class _MetadataBadgeState extends State<_MetadataBadge> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: Colors.black.withValues(alpha: 0.22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: scheme.onSurface.withValues(alpha: 0.74)),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: scheme.onSurface.withValues(alpha: 0.86),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              height: 1,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedOpacity(
+        duration: context.motion.controlTransitionDuration,
+        curve: context.motion.normal,
+        opacity: _hovered ? 1 : 0.52,
+        child: AnimatedContainer(
+          duration: context.motion.controlTransitionDuration,
+          curve: context.motion.normal,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: _hovered ? 0.11 : 0.055),
+                scheme.primary.withValues(alpha: _hovered ? 0.08 : 0.035),
+              ],
+            ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: _hovered ? 0.16 : 0.07),
             ),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                size: 14,
+                color: scheme.onSurface.withValues(alpha: 0.74),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w300,
+                  height: 1,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -334,13 +385,9 @@ class _StudioInformationPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prefersGlass = context.surfaces.effectsLevel == UiEffectsLevel.visual;
     return AppSurface(
-      variant:
-          prefersGlass ? AppSurfaceVariant.glass : AppSurfaceVariant.raised,
-      glassDensity: prefersGlass
-          ? AppSurfaceGlassDensity.low
-          : AppSurfaceGlassDensity.medium,
+      variant: AppSurfaceVariant.glass,
+      glassDensity: AppSurfaceGlassDensity.low,
       radius: 24,
       padding: EdgeInsets.all(compact ? 18 : 22),
       child: Selector<PlaybackController, Audio?>(
@@ -359,7 +406,7 @@ class _StudioInformationPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const _PanelHeader(
-                title: 'Information',
+                title: '歌曲信息',
                 subtitle: '封面、演唱信息与幕后人员',
               ),
               const SizedBox(height: 22),
@@ -383,7 +430,7 @@ class _StudioInformationPanel extends StatelessWidget {
                       child: credits.isEmpty
                           ? const _EmptyPanelState(
                               title: '暂无幕后信息',
-                              subtitle: '当前音频没有录入 composer 或 arranger。',
+                              subtitle: '当前音频没有录入作曲或编曲信息。',
                             )
                           : scrollable
                               ? Column(
@@ -422,17 +469,28 @@ class _StudioInformationPanel extends StatelessWidget {
                       mainAxisSize:
                           scrollable ? MainAxisSize.min : MainAxisSize.max,
                       children: [
-                        Center(
-                          child: _NowPlayingArtwork(
-                            size: artworkSize,
-                            radius: 28,
-                            large: true,
-                            showBackdropGlow: false,
+                        SizedBox(
+                          width: double.infinity,
+                          height: artworkSize + (scrollable ? 36 : 56),
+                          child: Stack(
+                            children: [
+                              const Positioned.fill(
+                                child: _ArtworkStageHitAbsorber(),
+                              ),
+                              Center(
+                                child: _NowPlayingArtwork(
+                                  size: artworkSize,
+                                  radius: 28,
+                                  large: true,
+                                  showBackdropGlow: false,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         SizedBox(height: scrollable ? 14 : 20),
                         _MarqueeText(
-                          text: audio.title,
+                          text: audio.displayTitle,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: compact ? 22 : 26,
@@ -442,7 +500,7 @@ class _StudioInformationPanel extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '${audio.artist} · ${audio.album}',
+                          _buildArtistAlbumLine(audio),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -470,9 +528,10 @@ class _StudioInformationPanel extends StatelessWidget {
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withValues(alpha: 0.8),
+                                  .withValues(alpha: 0.54),
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w300,
+                              fontStyle: FontStyle.italic,
                             ),
                           ),
                         ),
@@ -559,14 +618,10 @@ class _StudioQueuePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playback = context.read<PlaybackController>();
-    final prefersGlass = context.surfaces.effectsLevel == UiEffectsLevel.visual;
 
     return AppSurface(
-      variant:
-          prefersGlass ? AppSurfaceVariant.glass : AppSurfaceVariant.raised,
-      glassDensity: prefersGlass
-          ? AppSurfaceGlassDensity.low
-          : AppSurfaceGlassDensity.medium,
+      variant: AppSurfaceVariant.glass,
+      glassDensity: AppSurfaceGlassDensity.low,
       radius: 24,
       padding: EdgeInsets.all(compact ? 18 : 22),
       child: Column(
@@ -646,20 +701,120 @@ class _ImmersiveArtworkStage extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final size = (constraints.biggest.shortestSide * 0.82)
-            .clamp(compact ? 220.0 : 340.0, compact ? 320.0 : 520.0)
+        final preferredMinSize = compact ? 180.0 : 300.0;
+        final absoluteMinSize = compact ? 96.0 : 180.0;
+        final maxSize = compact ? 320.0 : 520.0;
+        final reservedForText = compact ? 112.0 : 128.0;
+        final maxCoverByHeight = (constraints.maxHeight - reservedForText)
+            .clamp(absoluteMinSize, maxSize)
+            .toDouble();
+        final minSize = preferredMinSize <= maxCoverByHeight
+            ? preferredMinSize
+            : absoluteMinSize;
+        final size = (constraints.biggest.shortestSide * 0.78)
+            .clamp(minSize, maxCoverByHeight)
             .toDouble();
 
-        return Center(
-          child: _NowPlayingArtwork(
-            size: size,
-            radius: 34,
-            large: true,
-            showBackdropGlow: true,
+        return SizedBox.expand(
+          child: Stack(
+            children: [
+              const Positioned.fill(child: _ArtworkStageHitAbsorber()),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _NowPlayingArtwork(
+                      size: size,
+                      radius: 34,
+                      large: true,
+                      showBackdropGlow: true,
+                    ),
+                    SizedBox(height: compact ? 20 : 26),
+                    SizedBox(
+                      width: size * 0.86,
+                      child: _NowPlayingStagedReveal(
+                        begin: 0.24,
+                        end: 0.68,
+                        beginOffset: const Offset(0, 0.06),
+                        child: _NowPlayingTrackIdentity(compact: compact),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
     );
+  }
+}
+
+class _NowPlayingTrackIdentity extends StatelessWidget {
+  const _NowPlayingTrackIdentity({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Selector<PlaybackController, Audio?>(
+      selector: (_, playback) => playback.nowPlaying,
+      builder: (context, audio, _) {
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  audio?.displayTitle ?? '正在播放',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    color: scheme.onSurface,
+                    fontSize: compact ? 22 : 28,
+                    fontWeight: FontWeight.w800,
+                    height: 1.08,
+                    decoration: TextDecoration.none,
+                    decorationColor: Colors.transparent,
+                    decorationThickness: 0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  audio?.displayArtist ?? '暂无播放',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    color: scheme.onSurface.withValues(alpha: 0.64),
+                    fontSize: compact ? 14 : 16,
+                    fontWeight: FontWeight.w400,
+                    height: 1.18,
+                    decoration: TextDecoration.none,
+                    decorationColor: Colors.transparent,
+                    decorationThickness: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ArtworkStageHitAbsorber extends StatelessWidget {
+  const _ArtworkStageHitAbsorber();
+
+  @override
+  Widget build(BuildContext context) {
+    return const AbsorbPointer(child: SizedBox.expand());
   }
 }
 
@@ -726,6 +881,30 @@ class _NowPlayingArtwork extends StatelessWidget {
             final imageKey = ValueKey(
               '${audio?.path ?? 'empty'}:${provider.hashCode}:${size.round()}',
             );
+            final heroArtwork = NowPlayingArtworkHeroFrame(
+              child: RepaintBoundary(
+                child: AnimatedSwitcher(
+                  duration: motion.controlTransitionDuration,
+                  switchInCurve: motion.normal,
+                  switchOutCurve: motion.fast,
+                  transitionBuilder: (child, animation) {
+                    final curved = CurvedAnimation(
+                      parent: animation,
+                      curve: motion.normal,
+                    );
+                    return FadeTransition(
+                      opacity: curved,
+                      child: ScaleTransition(
+                        scale:
+                            Tween<double>(begin: 0.975, end: 1).animate(curved),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(key: imageKey, child: mainImage),
+                ),
+              ),
+            );
 
             return SizedBox(
               width: size,
@@ -761,29 +940,10 @@ class _NowPlayingArtwork extends StatelessWidget {
                       ],
                     ),
                     child: Hero(
-                      tag: 'now-playing-artwork',
-                      child: RepaintBoundary(
-                        child: AnimatedSwitcher(
-                          duration: motion.controlTransitionDuration,
-                          switchInCurve: motion.normal,
-                          switchOutCurve: motion.fast,
-                          transitionBuilder: (child, animation) {
-                            final curved = CurvedAnimation(
-                              parent: animation,
-                              curve: motion.normal,
-                            );
-                            return FadeTransition(
-                              opacity: curved,
-                              child: ScaleTransition(
-                                scale: Tween<double>(begin: 0.975, end: 1)
-                                    .animate(curved),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: KeyedSubtree(key: imageKey, child: mainImage),
-                        ),
-                      ),
+                      tag: nowPlayingArtworkHeroTag,
+                      flightShuttleBuilder:
+                          nowPlayingArtworkFlightShuttleBuilder,
+                      child: heroArtwork,
                     ),
                   ),
                 ],
@@ -807,7 +967,12 @@ class _ImmersiveLyricStage extends StatelessWidget {
         context.read<PlaybackController>() is PlaybackService &&
             context.read<LyricController>() is LyricService;
     if (useLegacyLyricView) {
-      return const VerticalLyricView();
+      return const _NowPlayingStagedReveal(
+        begin: 0.34,
+        end: 0.9,
+        beginOffset: Offset(0, 0.05),
+        child: VerticalLyricView(),
+      );
     }
     final lyricController = context.read<LyricController>();
     final scheme = Theme.of(context).colorScheme;
@@ -819,30 +984,45 @@ class _ImmersiveLyricStage extends StatelessWidget {
           future: lyricController.currLyricFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+              return const _NowPlayingStagedReveal(
+                begin: 0.34,
+                end: 0.9,
+                beginOffset: Offset(0, 0.05),
+                child: Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
               );
             }
 
             final lyric = snapshot.data;
             if (lyric == null || lyric.lines.isEmpty) {
-              return Center(
-                child: Text(
-                  '暂无歌词',
-                  style: TextStyle(
-                    color: scheme.onSurface.withValues(alpha: 0.6),
-                    fontSize: compact ? 22 : 24,
-                    fontWeight: FontWeight.w600,
+              return _NowPlayingStagedReveal(
+                begin: 0.34,
+                end: 0.9,
+                beginOffset: const Offset(0, 0.05),
+                child: Center(
+                  child: Text(
+                    '暂无歌词',
+                    style: TextStyle(
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: compact ? 22 : 24,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               );
             }
 
-            return _CenteredLyricView(lyric: lyric, compact: compact);
+            return _NowPlayingStagedReveal(
+              begin: 0.34,
+              end: 0.9,
+              beginOffset: const Offset(0, 0.05),
+              child: _CenteredLyricView(lyric: lyric, compact: compact),
+            );
           },
         );
       },
@@ -1008,6 +1188,88 @@ class _CenteredLyricViewState extends State<_CenteredLyricView> {
     );
   }
 
+  Widget _primaryLineWidget({
+    required LyricLine line,
+    required bool isCurrent,
+    required Color lineColor,
+    required ColorScheme scheme,
+  }) {
+    final motion = context.motion;
+    final style = TextStyle(
+      color: lineColor,
+      fontSize: isCurrent ? _primaryFontSize : _secondaryFontSize,
+      fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
+      height: 1.18,
+      shadows: isCurrent
+          ? [
+              Shadow(
+                color: scheme.primary.withValues(alpha: 0.34),
+                blurRadius: 18,
+              ),
+            ]
+          : null,
+    );
+
+    if (isCurrent && line is SyncLyricLine && line.words.isNotEmpty) {
+      return StreamBuilder<double>(
+        stream: playbackService.positionStream,
+        initialData: playbackService.position,
+        builder: (context, snapshot) {
+          final positionMs =
+              ((snapshot.data ?? playbackService.position) * 1000)
+                  .roundToDouble();
+          return RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              children: [
+                for (final word in line.words)
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (bounds) {
+                        final lengthMs = word.length.inMilliseconds;
+                        final progress = lengthMs <= 0
+                            ? (positionMs >= word.start.inMilliseconds
+                                ? 1.0
+                                : 0.0)
+                            : ((positionMs - word.start.inMilliseconds) /
+                                    lengthMs)
+                                .clamp(0.0, 1.0)
+                                .toDouble();
+                        return LinearGradient(
+                          colors: [
+                            scheme.primary,
+                            scheme.primary,
+                            lineColor.withValues(alpha: 0.42),
+                            lineColor.withValues(alpha: 0.42),
+                          ],
+                          stops: [0, progress, progress, 1],
+                        ).createShader(bounds);
+                      },
+                      child: Text(word.content, style: style),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    return AnimatedDefaultTextStyle(
+      duration: motion.controlTransitionDuration,
+      curve: motion.normal,
+      style: style,
+      textAlign: TextAlign.center,
+      child: Text(
+        _primaryText(line),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -1045,6 +1307,7 @@ class _CenteredLyricViewState extends State<_CenteredLyricView> {
                   curve: motion.normal,
                   scale: isCurrent ? 1 : 0.982,
                   child: InkWell(
+                    enableFeedback: false,
                     borderRadius: BorderRadius.circular(24),
                     onTap: () {
                       playbackService.seek(line.start.inMilliseconds / 1000.0);
@@ -1059,32 +1322,11 @@ class _CenteredLyricViewState extends State<_CenteredLyricView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          AnimatedDefaultTextStyle(
-                            duration: motion.controlTransitionDuration,
-                            curve: motion.normal,
-                            style: TextStyle(
-                              color: lineColor,
-                              fontSize: isCurrent
-                                  ? _primaryFontSize
-                                  : _secondaryFontSize,
-                              fontWeight:
-                                  isCurrent ? FontWeight.w800 : FontWeight.w500,
-                              height: 1.18,
-                              shadows: isCurrent
-                                  ? [
-                                      Shadow(
-                                        color: scheme.primary
-                                            .withValues(alpha: 0.34),
-                                        blurRadius: 18,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            textAlign: TextAlign.center,
-                            child: Text(
-                              _primaryText(line),
-                              textAlign: TextAlign.center,
-                            ),
+                          _primaryLineWidget(
+                            line: line,
+                            isCurrent: isCurrent,
+                            lineColor: lineColor,
+                            scheme: scheme,
                           ),
                           if (_showTranslation(line)) ...[
                             const SizedBox(height: 8),

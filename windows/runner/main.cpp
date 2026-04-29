@@ -18,13 +18,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
   HANDLE single_instance_mutex =
-      CreateMutexW(nullptr, FALSE, L"Local\\CorianderPlayerSingleInstance");
+      CreateMutexW(nullptr, FALSE, L"Local\\QishengPlayerSingleInstance");
   const DWORD single_instance_error = GetLastError();
   if (single_instance_mutex != nullptr &&
       (single_instance_error == ERROR_ALREADY_EXISTS ||
        single_instance_error == ERROR_ACCESS_DENIED)) {
     const UINT activate_window_message =
-        RegisterWindowMessage(L"CorianderPlayerActivateMainWindow");
+        RegisterWindowMessage(L"QishengPlayerActivateMainWindow");
     if (activate_window_message != 0) {
       AllowSetForegroundWindow(ASFW_ANY);
       PostMessage(HWND_BROADCAST, activate_window_message, 0, 0);
@@ -46,7 +46,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"coriander_player", origin, size)) {
+  if (!window.Create(L"\u6816\u58F0", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

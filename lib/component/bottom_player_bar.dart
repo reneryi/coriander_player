@@ -1,14 +1,16 @@
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/component/audio_visualizer/liquid_audio_visualizer.dart';
-import 'package:coriander_player/component/cp/cp_components.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
-import 'package:coriander_player/src/bass/bass_player.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
-import 'package:coriander_player/utils.dart';
+﻿import 'package:qisheng_player/app_brand.dart';
+import 'package:qisheng_player/component/cp/cp_components.dart';
+import 'package:qisheng_player/component/now_playing_artwork_hero.dart';
+import 'package:qisheng_player/component/now_playing_navigation.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/navigation_state.dart';
+import 'package:qisheng_player/page/now_playing_page/component/current_playlist_view.dart';
+import 'package:qisheng_player/play_service/desktop_lyric_service.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/src/bass/bass_player.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
@@ -41,15 +43,6 @@ bool canPaintSliderAtWidth(double width) {
   return width.isFinite && width >= 8;
 }
 
-bool isNowPlayingRoute(BuildContext context) {
-  try {
-    return GoRouterState.of(context).uri.toString() ==
-        app_paths.NOW_PLAYING_PAGE;
-  } on GoError {
-    return false;
-  }
-}
-
 class BottomPlayerBar extends StatelessWidget {
   const BottomPlayerBar({super.key});
 
@@ -59,44 +52,31 @@ class BottomPlayerBar extends StatelessWidget {
       height: context.chrome.dockHeight,
       child: CpSurface(
         tone: CpSurfaceTone.floating,
-        radius: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6),
+        radius: 28,
+        border: false,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final layout = resolveBottomPlayerBarLayout(constraints.maxWidth);
-            final playback = context.read<PlaybackController>();
-
-            return Stack(
-              fit: StackFit.expand,
+            return Row(
               children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: LiquidAudioVisualizer(
-                      spectrum: playback.audioSpectrum,
-                    ),
+                Expanded(
+                  child: _BottomBarTrackSection(dense: layout.dense),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  flex: 2,
+                  child: _BottomBarCenterSection(
+                    compact: layout.compact,
+                    dense: layout.dense,
                   ),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _BottomBarTrackSection(dense: layout.dense),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      flex: 2,
-                      child: _BottomBarCenterSection(
-                        compact: layout.compact,
-                        dense: layout.dense,
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: _BottomBarActionsSection(
-                        compact: layout.compact,
-                        dense: layout.dense,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 24),
+                Expanded(
+                  child: _BottomBarActionsSection(
+                    compact: layout.compact,
+                    dense: layout.dense,
+                  ),
                 ),
               ],
             );
@@ -123,8 +103,15 @@ class _BottomBarTrackSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           onTap: () {
-            if (isNowPlayingRoute(context)) return;
-            context.go(app_paths.NOW_PLAYING_PAGE);
+            if (isNowPlayingRoute(context)) {
+              final navigation = AppNavigationState.instance;
+              navigation.closeNowPlaying(
+                context,
+                fallback: navigation.lastShellLocation,
+              );
+              return;
+            }
+            openNowPlayingRoute(context);
           },
           child: Row(
             children: [
@@ -136,7 +123,7 @@ class _BottomBarTrackSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      audio?.title ?? 'Coriander Player',
+                      audio?.displayTitle ?? AppBrand.displayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -148,7 +135,7 @@ class _BottomBarTrackSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      audio == null ? 'No track playing' : audio.artist,
+                      audio?.displayArtist ?? '暂无播放',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -180,10 +167,19 @@ class _TrackCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final accents = context.accents;
     final placeholder = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(nowPlayingArtworkHeroRadius),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.12),
+            accents.accent.withValues(alpha: 0.08),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Icon(
         Symbols.music_note,
@@ -210,7 +206,9 @@ class _TrackCover extends StatelessWidget {
                     final cover = provider == null
                         ? placeholder
                         : ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(
+                              nowPlayingArtworkHeroRadius,
+                            ),
                             child: Image(
                               image: provider,
                               fit: BoxFit.cover,
@@ -244,18 +242,24 @@ class _TrackCover extends StatelessWidget {
                   },
                 );
 
-          final cover = _SpinningArtwork(
-            spinning: spinning,
+          final framedArtwork = NowPlayingArtworkHeroFrame(
             child: RepaintBoundary(child: artwork),
           );
 
           if (isNowPlayingRoute(context)) {
-            return cover;
+            return _SpinningArtwork(
+              spinning: spinning,
+              child: framedArtwork,
+            );
           }
 
-          return Hero(
-            tag: 'now-playing-artwork',
-            child: cover,
+          return _SpinningArtwork(
+            spinning: spinning,
+            child: Hero(
+              tag: nowPlayingArtworkHeroTag,
+              flightShuttleBuilder: nowPlayingArtworkFlightShuttleBuilder,
+              child: framedArtwork,
+            ),
           );
         },
       ),
@@ -332,14 +336,26 @@ class _BottomBarCenterSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _ProgressStrip(compact: compact, dense: dense),
-        SizedBox(height: dense ? 2 : 4),
-        _PlaybackControls(dense: dense),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const progressHeight = 16.0;
+        final controlsHeight = dense ? 52.0 : 56.0;
+        final preferredGap = dense ? 2.0 : 2.0;
+        final availableGap = constraints.hasBoundedHeight
+            ? constraints.maxHeight - progressHeight - controlsHeight
+            : preferredGap;
+        final gap = availableGap.clamp(0.0, preferredGap).toDouble();
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ProgressStrip(compact: compact, dense: dense),
+            SizedBox(height: gap),
+            _PlaybackControls(dense: dense),
+          ],
+        );
+      },
     );
   }
 }
@@ -365,7 +381,6 @@ class _ProgressStripState extends State<_ProgressStrip> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final accents = context.accents;
     final motion = context.motion;
     final playback = context.read<PlaybackController>();
     final duration = context.select<PlaybackController, double>(
@@ -432,14 +447,15 @@ class _ProgressStripState extends State<_ProgressStrip> {
                             return SliderTheme(
                               data: SliderTheme.of(context).copyWith(
                                 trackHeight: 2,
-                                activeTrackColor: accents.progressActive,
+                                activeTrackColor:
+                                    context.accents.progressActive,
                                 inactiveTrackColor:
-                                    Colors.white.withValues(alpha: 0.16),
-                                thumbColor: accents.progressActive,
+                                    context.accents.progressInactive,
+                                thumbColor: context.accents.accent,
                                 overlayShape: SliderComponentShape.noOverlay,
                                 thumbShape: _GlowSliderThumbShape(
                                   radius: animatedThumbRadius,
-                                  color: accents.progressActive,
+                                  color: context.accents.accent,
                                 ),
                               ),
                               child: Slider(
@@ -548,95 +564,350 @@ class _PlaybackControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playback = context.read<PlaybackController>();
+    final primaryButtonSize = dense ? 52.0 : 56.0;
+    final outerGap = dense ? 16.0 : 22.0;
+    final innerGap = dense ? 18.0 : 28.0;
+    final clusterWidth = dense ? 264.0 : 336.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return StreamBuilder<PlayerState>(
+          stream: playback.playerStateStream,
+          initialData: playback.playerState,
+          builder: (context, snapshot) {
+            final playerState = snapshot.data ?? PlayerState.stopped;
+            final isPlaying = playerState == PlayerState.playing;
+            final icon = switch (playerState) {
+              PlayerState.completed => Symbols.replay,
+              PlayerState.playing => Symbols.pause,
+              _ => Symbols.play_arrow,
+            };
+            final tooltip = switch (playerState) {
+              PlayerState.completed => '重新播放',
+              PlayerState.playing => '暂停',
+              _ => '播放',
+            };
+            final onPressed = switch (playerState) {
+              PlayerState.completed => playback.playAgain,
+              PlayerState.playing => playback.pause,
+              _ => playback.start,
+            };
+
+            final controls = SizedBox(
+              width: clusterWidth,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _ShuffleModeControl(dense: dense),
+                  SizedBox(width: outerGap),
+                  _TransportIconButton(
+                    tooltip: '上一首',
+                    onPressed: playback.lastAudio,
+                    icon: Symbols.skip_previous,
+                    dense: dense,
+                  ),
+                  SizedBox(width: innerGap),
+                  _PrimaryTransportButton(
+                    icon: icon,
+                    tooltip: tooltip,
+                    onPressed: onPressed,
+                    isPlaying: isPlaying,
+                    size: primaryButtonSize,
+                  ),
+                  SizedBox(width: innerGap),
+                  _TransportIconButton(
+                    tooltip: '下一首',
+                    onPressed: playback.nextAudio,
+                    icon: Symbols.skip_next,
+                    dense: dense,
+                  ),
+                  SizedBox(width: outerGap),
+                  _SequenceModeControl(dense: dense),
+                ],
+              ),
+            );
+
+            if (!constraints.hasBoundedWidth ||
+                constraints.maxWidth >= clusterWidth) {
+              return controls;
+            }
+
+            return SizedBox(
+              width: constraints.maxWidth,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: controls,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ShuffleModeControl extends StatelessWidget {
+  const _ShuffleModeControl({required this.dense});
+
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final playback = context.read<PlaybackController>();
+    return ValueListenableBuilder<PlayMode>(
+      valueListenable: playback.playMode,
+      builder: (context, playMode, _) {
+        final selected = playMode == PlayMode.loop;
+        return _TransportIconButton(
+          tooltip: selected ? '关闭随机播放' : '随机播放',
+          onPressed: () => playback.setPlayMode(
+            selected ? PlayMode.forward : PlayMode.loop,
+          ),
+          icon: Symbols.shuffle,
+          dense: dense,
+          selected: selected,
+        );
+      },
+    );
+  }
+}
+
+class _SequenceModeControl extends StatelessWidget {
+  const _SequenceModeControl({required this.dense});
+
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final playback = context.read<PlaybackController>();
+    return ValueListenableBuilder<PlayMode>(
+      valueListenable: playback.playMode,
+      builder: (context, playMode, _) {
+        final single = playMode == PlayMode.singleLoop;
+        final next = switch (playMode) {
+          PlayMode.loop => PlayMode.forward,
+          PlayMode.forward => PlayMode.singleLoop,
+          PlayMode.singleLoop => PlayMode.forward,
+        };
+        return _TransportIconButton(
+          tooltip: single ? '单曲循环' : '顺序播放',
+          onPressed: () => playback.setPlayMode(next),
+          icon: single ? Symbols.repeat_one_on : Symbols.repeat,
+          dense: dense,
+          selected: single || playMode == PlayMode.forward,
+        );
+      },
+    );
+  }
+}
+
+class _TransportIconButton extends StatefulWidget {
+  const _TransportIconButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+    required this.dense,
+    this.selected = false,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final bool dense;
+  final bool selected;
+
+  @override
+  State<_TransportIconButton> createState() => _TransportIconButtonState();
+}
+
+class _TransportIconButtonState extends State<_TransportIconButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  bool get _enabled => widget.onPressed != null;
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final accents = context.accents;
     final motion = context.motion;
-    final buttonSize = dense ? 42.0 : 48.0;
+    final hitSize = widget.dense ? 34.0 : 40.0;
+    final radius = BorderRadius.circular(999);
+    final iconColor = !_enabled
+        ? scheme.onSurface.withValues(alpha: 0.34)
+        : widget.selected
+            ? accents.accent
+            : scheme.onSurface.withValues(alpha: _hovered ? 0.96 : 0.82);
 
-    return StreamBuilder<PlayerState>(
-      stream: playback.playerStateStream,
-      initialData: playback.playerState,
-      builder: (context, snapshot) {
-        final playerState = snapshot.data ?? PlayerState.stopped;
-        final isPlaying = playerState == PlayerState.playing;
-        final icon = switch (playerState) {
-          PlayerState.completed => Symbols.replay,
-          PlayerState.playing => Symbols.pause,
-          _ => Symbols.play_arrow,
-        };
-        final onPressed = switch (playerState) {
-          PlayerState.completed => playback.playAgain,
-          PlayerState.playing => playback.pause,
-          _ => playback.start,
-        };
-
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CpIconButton(
-              tooltip: 'Previous',
-              onPressed: playback.lastAudio,
-              icon: const Icon(Symbols.skip_previous),
+    final button = MouseRegion(
+      cursor: _enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
+      child: GestureDetector(
+        onTapDown: _enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: _enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: _enabled ? () => setState(() => _pressed = false) : null,
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : (_hovered ? 1.06 : 1),
+          duration: motion.microInteractionDuration,
+          curve: motion.fast,
+          child: AnimatedContainer(
+            duration: motion.controlTransitionDuration,
+            curve: motion.normal,
+            width: hitSize,
+            height: hitSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.selected
+                  ? accents.accent.withValues(alpha: 0.13)
+                  : _hovered
+                      ? Colors.white.withValues(alpha: 0.045)
+                      : Colors.transparent,
+              boxShadow: [
+                if (widget.selected)
+                  BoxShadow(
+                    color: accents.accentGlow.withValues(alpha: 0.18),
+                    blurRadius: 12,
+                    spreadRadius: -8,
+                  ),
+              ],
             ),
-            const SizedBox(width: 10),
-            AnimatedContainer(
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                enableFeedback: false,
+                borderRadius: radius,
+                onTap: widget.onPressed,
+                child: Center(
+                  child: Icon(
+                    widget.icon,
+                    size: widget.dense ? 18 : 22,
+                    color: iconColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Tooltip(message: widget.tooltip, child: button);
+  }
+}
+
+class _PrimaryTransportButton extends StatefulWidget {
+  const _PrimaryTransportButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    required this.isPlaying,
+    required this.size,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final bool isPlaying;
+  final double size;
+
+  @override
+  State<_PrimaryTransportButton> createState() =>
+      _PrimaryTransportButtonState();
+}
+
+class _PrimaryTransportButtonState extends State<_PrimaryTransportButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final accents = context.accents;
+    final motion = context.motion;
+    final glowAlpha = widget.isPlaying ? 0.38 : 0.26;
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) => setState(() => _pressed = false),
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.95 : (_hovered ? 1.035 : 1),
+            duration: motion.microInteractionDuration,
+            curve: motion.fast,
+            child: AnimatedContainer(
               duration: motion.controlTransitionDuration,
               curve: motion.normal,
-              width: buttonSize,
-              height: buttonSize,
+              width: widget.size,
+              height: widget.size,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color.lerp(accents.accent, Colors.white, 0.18)!,
+                    accents.accent,
+                    Color.lerp(accents.accent, Colors.black, 0.08)!,
+                  ],
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: scheme.primary.withValues(
-                      alpha: isPlaying ? 0.32 : 0.24,
+                    color: accents.accentGlow.withValues(
+                      alpha: _hovered ? glowAlpha + 0.06 : glowAlpha - 0.04,
                     ),
-                    blurRadius: isPlaying ? 20 : 14,
-                    spreadRadius: isPlaying ? 1.5 : 0.5,
+                    blurRadius: widget.isPlaying ? 28 : 22,
+                    spreadRadius: widget.isPlaying ? 3 : 1,
                   ),
                 ],
               ),
-              child: FilledButton(
-                onPressed: onPressed,
-                style: FilledButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.square(buttonSize),
-                  maximumSize: Size.square(buttonSize),
-                  shape: const CircleBorder(),
-                  backgroundColor: isPlaying
-                      ? scheme.primary
-                      : scheme.primary.withValues(alpha: 0.92),
-                ),
-                child: AnimatedSwitcher(
-                  duration: motion.microInteractionDuration,
-                  switchInCurve: motion.emphasized,
-                  switchOutCurve: motion.fast,
-                  transitionBuilder: (child, animation) {
-                    final curved = CurvedAnimation(
-                      parent: animation,
-                      curve: motion.emphasized,
-                    );
-                    return FadeTransition(
-                      opacity: curved,
-                      child: ScaleTransition(
-                        scale:
-                            Tween<double>(begin: 0.78, end: 1).animate(curved),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Icon(icon, key: ValueKey(icon)),
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  enableFeedback: false,
+                  customBorder: const CircleBorder(),
+                  onTap: widget.onPressed,
+                  child: AnimatedSwitcher(
+                    duration: motion.microInteractionDuration,
+                    switchInCurve: motion.emphasized,
+                    switchOutCurve: motion.fast,
+                    transitionBuilder: (child, animation) {
+                      final curved = CurvedAnimation(
+                        parent: animation,
+                        curve: motion.emphasized,
+                      );
+                      return FadeTransition(
+                        opacity: curved,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.78, end: 1)
+                              .animate(curved),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Icon(
+                      widget.icon,
+                      key: ValueKey(widget.icon),
+                      color: accents.onAccent,
+                      size: widget.size < 60 ? 24 : 28,
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            CpIconButton(
-              tooltip: 'Next',
-              onPressed: playback.nextAudio,
-              icon: const Icon(Symbols.skip_next),
-            ),
-          ],
-        );
-      },
+          ),
+        ),
+      ),
     );
   }
 }
@@ -655,18 +926,30 @@ class _BottomBarActionsSection extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final constrained = dense || constraints.maxWidth < 330;
-        final volumeWidth = constrained ? 0.0 : (compact ? 72.0 : 96.0);
-        return Row(
+        final volumeWidth = constrained ? 0.0 : (compact ? 84.0 : 112.0);
+        final actions = Row(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             const _ExclusiveModeControl(),
-            SizedBox(width: constrained ? 2 : 6),
+            SizedBox(width: constrained ? 2 : 10),
             _VolumeControl(width: volumeWidth),
-            SizedBox(width: constrained ? 4 : 8),
-            const _PlayModeControl(),
-            SizedBox(width: constrained ? 2 : 6),
+            SizedBox(width: constrained ? 4 : 16),
+            const _DesktopLyricControl(),
+            SizedBox(width: constrained ? 4 : 16),
             _QueueEntryButton(dense: constrained),
           ],
+        );
+
+        if (!constraints.hasBoundedWidth) return actions;
+
+        return SizedBox(
+          width: constraints.maxWidth,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: actions,
+          ),
         );
       },
     );
@@ -690,7 +973,7 @@ class _ExclusiveModeControl extends StatelessWidget {
         onPressed: () => playback.useExclusiveMode(!exclusive),
         icon: Center(
           child: Text(
-            exclusive ? 'Excl' : 'Shrd',
+            exclusive ? '独占' : '共享',
             style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
@@ -719,8 +1002,8 @@ class _VolumeControlState extends State<_VolumeControl> {
   @override
   Widget build(BuildContext context) {
     final playback = context.read<PlaybackController>();
-    final scheme = Theme.of(context).colorScheme;
     final motion = context.motion;
+    final accents = context.accents;
 
     return ValueListenableBuilder<double>(
       valueListenable: playback.volumeDspNotifier,
@@ -742,97 +1025,106 @@ class _VolumeControlState extends State<_VolumeControl> {
         return MouseRegion(
           onEnter: (_) => setState(() => _hovering = true),
           onExit: (_) => setState(() => _hovering = false),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CpIconButton(
-                tooltip: 'Volume',
-                onPressed: () {
-                  final next = current <= 0 ? 0.5 : 0.0;
-                  playback.setVolumeDsp(next);
-                },
-                icon: AnimatedSwitcher(
-                  duration: motion.microInteractionDuration,
-                  switchInCurve: motion.emphasized,
-                  switchOutCurve: motion.fast,
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: ScaleTransition(
-                        scale: Tween<double>(begin: 0.82, end: 1)
-                            .animate(animation),
-                        child: child,
-                      ),
-                    );
+          child: Container(
+            height: 42,
+            padding: EdgeInsets.only(right: showSlider ? 8 : 0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              color: Colors.white.withValues(alpha: 0.07),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CpIconButton(
+                  tooltip: '音量',
+                  onPressed: () {
+                    final next = current <= 0 ? 0.5 : 0.0;
+                    playback.setVolumeDsp(next);
                   },
-                  child: Icon(icon, key: ValueKey(icon)),
-                ),
-              ),
-              ClipRect(
-                child: AnimatedContainer(
-                  duration: motion.controlTransitionDuration,
-                  curve: motion.normal,
-                  width: effectiveWidth,
-                  child: !showSlider
-                      ? const SizedBox.shrink()
-                      : LayoutBuilder(
-                          builder: (context, sliderConstraints) {
-                            if (!canPaintSliderAtWidth(
-                              sliderConstraints.maxWidth,
-                            )) {
-                              return const SizedBox.shrink();
-                            }
-
-                            return TweenAnimationBuilder<double>(
-                              tween: Tween<double>(
-                                end: resolveSliderThumbRadius(
-                                  hovering: _hovering,
-                                  dragging: _dragging,
-                                  visibleRadius: 5,
-                                ),
-                              ),
-                              duration: motion.microInteractionDuration,
-                              curve: motion.fast,
-                              builder: (context, animatedThumbRadius, _) {
-                                return SliderTheme(
-                                  data: SliderTheme.of(context).copyWith(
-                                    trackHeight: 2,
-                                    activeTrackColor: scheme.primary,
-                                    inactiveTrackColor:
-                                        Colors.white.withValues(alpha: 0.14),
-                                    thumbColor: scheme.primary,
-                                    overlayShape:
-                                        SliderComponentShape.noOverlay,
-                                    thumbShape: _GlowSliderThumbShape(
-                                      radius: animatedThumbRadius,
-                                      color: scheme.primary,
-                                    ),
-                                  ),
-                                  child: Slider(
-                                    min: 0,
-                                    max: 1,
-                                    value: current,
-                                    onChangeStart: (next) {
-                                      setState(() {
-                                        _dragging = true;
-                                        _dragValue = next;
-                                      });
-                                    },
-                                    onChanged: (next) {
-                                      setState(() => _dragValue = next);
-                                      playback.setVolumeDsp(next);
-                                    },
-                                    onChangeEnd: (_) =>
-                                        setState(() => _dragging = false),
-                                  ),
-                                );
-                              },
-                            );
-                          },
+                  icon: AnimatedSwitcher(
+                    duration: motion.microInteractionDuration,
+                    switchInCurve: motion.emphasized,
+                    switchOutCurve: motion.fast,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.82, end: 1)
+                              .animate(animation),
+                          child: child,
                         ),
+                      );
+                    },
+                    child: Icon(icon, key: ValueKey(icon)),
+                  ),
                 ),
-              ),
-            ],
+                ClipRect(
+                  child: AnimatedContainer(
+                    duration: motion.controlTransitionDuration,
+                    curve: motion.normal,
+                    width: effectiveWidth,
+                    child: !showSlider
+                        ? const SizedBox.shrink()
+                        : LayoutBuilder(
+                            builder: (context, sliderConstraints) {
+                              if (!canPaintSliderAtWidth(
+                                sliderConstraints.maxWidth,
+                              )) {
+                                return const SizedBox.shrink();
+                              }
+
+                              return TweenAnimationBuilder<double>(
+                                tween: Tween<double>(
+                                  end: resolveSliderThumbRadius(
+                                    hovering: _hovering,
+                                    dragging: _dragging,
+                                    visibleRadius: 5,
+                                  ),
+                                ),
+                                duration: motion.microInteractionDuration,
+                                curve: motion.fast,
+                                builder: (context, animatedThumbRadius, _) {
+                                  return SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      trackHeight: 2,
+                                      activeTrackColor: accents.progressActive,
+                                      inactiveTrackColor:
+                                          accents.progressInactive,
+                                      thumbColor: accents.accent,
+                                      overlayShape:
+                                          SliderComponentShape.noOverlay,
+                                      thumbShape: _GlowSliderThumbShape(
+                                        radius: animatedThumbRadius,
+                                        color: accents.accent,
+                                      ),
+                                    ),
+                                    child: Slider(
+                                      min: 0,
+                                      max: 1,
+                                      value: current,
+                                      onChangeStart: (next) {
+                                        setState(() {
+                                          _dragging = true;
+                                          _dragValue = next;
+                                        });
+                                      },
+                                      onChanged: (next) {
+                                        setState(() => _dragValue = next);
+                                        playback.setVolumeDsp(next);
+                                      },
+                                      onChangeEnd: (_) =>
+                                          setState(() => _dragging = false),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -840,33 +1132,42 @@ class _VolumeControlState extends State<_VolumeControl> {
   }
 }
 
-class _PlayModeControl extends StatelessWidget {
-  const _PlayModeControl();
+class _DesktopLyricControl extends StatelessWidget {
+  const _DesktopLyricControl();
 
   @override
   Widget build(BuildContext context) {
-    final playback = context.read<PlaybackController>();
-
-    return ValueListenableBuilder<PlayMode>(
-      valueListenable: playback.playMode,
-      builder: (context, playMode, _) {
-        final (tooltip, icon) = switch (playMode) {
-          PlayMode.forward => ('Sequential', Symbols.repeat),
-          PlayMode.loop => ('Shuffle', Symbols.shuffle),
-          PlayMode.singleLoop => ('Repeat one', Symbols.repeat_one_on),
-        };
-
-        return CpIconButton(
-          tooltip: tooltip,
-          onPressed: () {
-            final next = switch (playMode) {
-              PlayMode.forward => PlayMode.loop,
-              PlayMode.loop => PlayMode.singleLoop,
-              PlayMode.singleLoop => PlayMode.forward,
-            };
-            playback.setPlayMode(next);
+    return Consumer<DesktopLyricController>(
+      builder: (context, desktopLyricService, _) {
+        return FutureBuilder(
+          future: desktopLyricService.desktopLyric,
+          builder: (context, snapshot) {
+            final ready = !desktopLyricService.isStarting &&
+                snapshot.connectionState == ConnectionState.done;
+            final enabled = snapshot.data != null;
+            return CpIconButton(
+              tooltip: '桌面歌词${enabled ? "已开启" : "已关闭"}',
+              onPressed: ready
+                  ? enabled
+                      ? desktopLyricService.isLocked
+                          ? desktopLyricService.sendUnlockMessage
+                          : desktopLyricService.killDesktopLyric
+                      : desktopLyricService.startDesktopLyric
+                  : null,
+              icon: ready
+                  ? Icon(
+                      desktopLyricService.isLocked
+                          ? Symbols.lock
+                          : Symbols.toast,
+                      fill: enabled ? 1 : 0,
+                    )
+                  : const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+            );
           },
-          icon: Icon(icon),
         );
       },
     );
@@ -881,7 +1182,7 @@ class _QueueEntryButton extends StatelessWidget {
   Future<void> _openQueueDialog(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final width = (size.width * 0.42).clamp(420.0, 620.0).toDouble();
-    final height = (size.height * 0.72).clamp(420.0, 680.0).toDouble();
+    final height = (size.height * 0.68).clamp(400.0, 640.0).toDouble();
 
     return showDialog<void>(
       context: context,
@@ -893,7 +1194,7 @@ class _QueueEntryButton extends StatelessWidget {
           child: CpSurface(
             tone: CpSurfaceTone.floating,
             radius: 28,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
             child: SizedBox(
               width: width,
               height: height,
@@ -926,7 +1227,7 @@ class _QueueEntryButton extends StatelessWidget {
                     child: CurrentPlaylistView(
                       showHeader: false,
                       dense: true,
-                      enableReorder: false,
+                      enableReorder: true,
                     ),
                   ),
                 ],
@@ -964,6 +1265,11 @@ class _QueueEntryButton extends StatelessWidget {
                       canOpenQueue ? () => _openQueueDialog(context) : null,
                   icon: const Icon(Symbols.queue_music),
                   label: Text(label),
+                  style: OutlinedButton.styleFrom(
+                    fixedSize: const Size.fromHeight(42),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    enableFeedback: false,
+                  ),
                 ),
         );
       },

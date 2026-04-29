@@ -1,14 +1,15 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/play_service/desktop_lyric_service.dart';
-import 'package:coriander_player/play_service/lyric_service.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
-import 'package:coriander_player/src/bass/bass_player.dart';
-import 'package:coriander_player/theme/app_theme.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/play_service/desktop_lyric_service.dart';
+import 'package:qisheng_player/play_service/lyric_service.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/src/bass/bass_player.dart';
+import 'package:qisheng_player/theme/app_theme.dart';
+import 'package:qisheng_player/theme_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -145,13 +146,11 @@ class FakePlaybackController extends PlaybackController {
         _playlist = ValueNotifier<List<Audio>>(queue),
         _playMode = ValueNotifier<PlayMode>(PlayMode.loop),
         _volume = ValueNotifier<double>(0.5),
-        _audioSpectrum = ValueNotifier<List<double>>(const []),
         _playerState = initialState;
 
   final ValueNotifier<List<Audio>> _playlist;
   final ValueNotifier<PlayMode> _playMode;
   final ValueNotifier<double> _volume;
-  final ValueNotifier<List<double>> _audioSpectrum;
   final StreamController<double> _positionController =
       StreamController<double>.broadcast();
   final StreamController<PlayerState> _stateController =
@@ -195,13 +194,6 @@ class FakePlaybackController extends PlaybackController {
 
   @override
   ValueNotifier<PlayMode> get playMode => _playMode;
-
-  @override
-  ValueListenable<List<double>> get audioSpectrum => _audioSpectrum;
-
-  void setAudioSpectrum(List<double> spectrum) {
-    _audioSpectrum.value = List<double>.from(spectrum);
-  }
 
   @override
   void lastAudio() {}
@@ -268,6 +260,20 @@ class FakePlaybackController extends PlaybackController {
     _stateController.add(_playerState);
   }
 
+  void setNowPlaying(Audio? audio, {List<Audio>? queue}) {
+    _nowPlaying = audio;
+    if (queue != null) {
+      _playlist.value = queue;
+      _playlistIndex = audio == null
+          ? 0
+          : queue.indexWhere((item) => item.path == audio.path);
+      if (_playlistIndex < 0) {
+        _playlistIndex = 0;
+      }
+    }
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _positionController.close();
@@ -275,7 +281,6 @@ class FakePlaybackController extends PlaybackController {
     _playlist.dispose();
     _playMode.dispose();
     _volume.dispose();
-    _audioSpectrum.dispose();
     super.dispose();
   }
 }
@@ -283,21 +288,29 @@ class FakePlaybackController extends PlaybackController {
 class FakeLyricController extends LyricController {
   FakeLyricController(this._lyric);
 
-  final Lyric _lyric;
+  Lyric _lyric;
   final StreamController<int> _lineController =
       StreamController<int>.broadcast();
+  int _currentLineIndex = 0;
 
   @override
   Future<Lyric?> get currLyricFuture async => _lyric;
 
   @override
-  int get currentLyricLineIndex => 0;
+  int get currentLyricLineIndex => _currentLineIndex;
 
   @override
   Stream<int> get lyricLineStream => _lineController.stream;
 
   void emitLine(int line) {
+    _currentLineIndex = line;
     _lineController.add(line);
+  }
+
+  void setLyric(Lyric lyric) {
+    _lyric = lyric;
+    _currentLineIndex = 0;
+    notifyListeners();
   }
 
   @override
@@ -359,6 +372,7 @@ Widget buildMediaHarness({
 }) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider.value(value: ThemeProvider.instance),
       ChangeNotifierProvider<PlaybackController>.value(
         value: playbackController,
       ),
@@ -380,7 +394,7 @@ List<LrcLine> buildLongLrcLines() {
   return List.generate(40, (index) {
     return LrcLine(
       Duration(seconds: index * 5),
-      '第 ${index + 1} 行歌词，内容非常长非常长，用来验证沉浸模式下的居中歌词滚动不会出现 overflow，并且每一行都保持可读。',
+      '绗?${index + 1} 琛屾瓕璇嶏紝鍐呭闈炲父闀块潪甯搁暱锛岀敤鏉ラ獙璇佹矇娴告ā寮忎笅鐨勫眳涓瓕璇嶆粴鍔ㄤ笉浼氬嚭鐜?overflow锛屽苟涓旀瘡涓€琛岄兘淇濇寔鍙銆?',
       isBlank: false,
       length: const Duration(seconds: 5),
     );

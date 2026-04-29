@@ -1,73 +1,46 @@
 # 项目结构说明
 
-本文档说明仓库内各目录的职责边界，目的是让源码、构建缓存、发布产物、协作笔记彼此分离，避免目录继续变乱。
+本文档说明栖声播放器仓库内主要目录的职责边界，方便后续维护、测试和发布。
 
-## 根目录原则
+## 根目录约定
 
-- 根目录只保留“项目入口级”内容：核心源码目录、平台目录、配置文件、许可证、README、贡献说明。
-- 业务源码优先放在 `lib/`、`rust/`、`windows/`、`third_party/desktop_lyric/`。
-- 自动生成物不混入源码目录说明中。
-- 发布产物统一进入 `dist/`，不再塞进 `build/`。
+- 根目录只保留项目入口级文件、平台目录、源码目录、配置文件、许可证和基础文档。
+- 业务源码集中放在 `lib/`、`rust/`、`windows/` 和 `third_party/desktop_lyric/`。
+- 发布产物统一进入 `dist/`，自动构建缓存保留在 `build/`。
+- 本地依赖、个人笔记、调试输出和曲库数据不提交到 Git。
 
-## 目录职责
+## 源码目录
 
-### 源码相关
+- `lib/`：Flutter 主程序源码，包含页面、组件、主题、曲库、播放服务和 Dart 侧桥接逻辑。
+- `lib/component/`：底部播放器、侧栏、标题栏、歌词预览、封面和通用 UI 组件。
+- `lib/library/`：音频索引、元数据、歌单、封面缓存、播放次数和覆盖信息。
+- `lib/page/`：音乐、艺术家、专辑、文件夹、歌单、设置、详情页和 Now Playing 页面。
+- `lib/play_service/`：播放控制、歌词、桌面歌词和播放会话服务。
+- `lib/src/bass/`：BASS 播放器桥接与底层播放能力封装。
+- `rust/`：Rust 原生能力，主要用于标签读取、元数据清洗和系统能力补充。
+- `rust_builder/`：`flutter_rust_bridge` 生成与桥接包。
+- `windows/`：Windows Runner、资源、窗口控制和原生平台集成。
+- `third_party/desktop_lyric/`：桌面歌词子程序，是当前项目的 path 依赖。
 
-- `lib/`
-  - Flutter 主程序源码。
-  - 包含页面、组件、播放服务、主题、FFI Dart 侧桥接等。
-- `rust/`
-  - Rust 业务实现与 FRB 相关 Rust 代码。
-  - `rust/target/` 属于编译缓存，不属于源码。
-- `windows/`
-  - 主程序 Windows 原生 Runner 与平台适配代码。
-- `third_party/desktop_lyric/`
-  - 桌面歌词子项目。
-  - 这是 path 依赖，属于项目的一部分，不应与普通构建产物混淆。
-- `test/`
-  - Flutter/Dart 测试。
-- `tools/`
-  - 项目工具脚本，不放业务代码。
-  - `tools/release/`：发布、打包脚本。
-  - `tools/test/`：工具类或补充测试脚本。
+## 测试与工具
 
-### 文档相关
+- `test/`：Flutter Widget、服务、主题、导航和回归测试。
+- `tools/test/`：工具类或补充测试脚本。
+- `tools/release/`：Windows 发布与打包脚本。
 
-- `docs/`
-  - 项目文档统一入口。
-  - `docs/changelog.md`：变更日志。
-  - `docs/msix_install.md`：MSIX 安装说明。
-  - `docs/screenshots/`：README 引用截图。
-  - `docs/releases/`：版本发布说明、发布用 JSON 描述、历史归档。
+## 文档与发布
 
-### 发布与本地运行
+- `docs/changelog.md`：版本更新日志。
+- `docs/release_workflow.md`：Windows 发布流程。
+- `docs/msix_install.md`：历史 MSIX 安装说明。
+- `docs/releases/`：版本发布说明和 GitHub Release payload。
+- `docs/screenshots/`：README 或发布说明可引用的截图。
 
-- `dist/windows/package/`
-  - 已整合好的发布目录，可直接检查最终交付内容。
-  - 用于观察最终 exe、依赖 DLL、桌面歌词子程序、资源是否齐全。
-- `dist/windows/artifacts/packages/`
-  - 最终输出的压缩包与安装程序。
-- `dist/windows/installer_work/`
-  - 安装程序生成时的中间工作目录。
-- `BASS/`
-  - 本地运行和打包时需要的 BASS DLL。
-  - 这是本地依赖目录，不提交到 Git。
+## 本地目录
 
-### 缓存与忽略项
-
-- `build/`
-  - Flutter / CMake / Rust 联动构建输出目录。
-  - 只看作临时构建结果，不用于长期保存发布内容。
-- `.dart_tool/`
-  - Dart / Flutter 本地缓存。
-- `notes/`
-  - 本地协作笔记，例如 AI 规则、任务清单、工作日志。
-  - 已被忽略，不参与开源仓库提交。
-
-## 维护约定
-
-- 新增项目文档时，优先放入 `docs/`，而不是继续堆在根目录。
-- 新增发布脚本时，优先放入 `tools/release/`。
-- 新增非业务测试脚本时，优先放入 `tools/test/`。
-- 新增安装包、压缩包、整合目录时，统一放入 `dist/windows/`。
-- 不再把“可运行整合目录”和“Flutter 自动构建目录”混在 `build/` 下。
+- `BASS/`：本地运行与打包需要的 BASS DLL，不提交到 Git。
+- `build/`：Flutter、CMake 和 Rust 自动构建输出，不作为长期发布归档。
+- `dist/windows/package/`：发布脚本整合后的完整可运行目录。
+- `dist/windows/artifacts/packages/`：最终 zip 和安装器输出目录。
+- `.dart_tool/`：Dart / Flutter 本地缓存。
+- `notes/`：本地协作笔记，不参与开源仓库提交。

@@ -2,11 +2,11 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/audio_metadata_override_store.dart';
-import 'package:coriander_player/library/online_cover_store.dart';
-import 'package:coriander_player/src/rust/api/tag_reader.dart';
-import 'package:coriander_player/utils.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/audio_metadata_override_store.dart';
+import 'package:qisheng_player/library/online_cover_store.dart';
+import 'package:qisheng_player/src/rust/api/tag_reader.dart';
+import 'package:qisheng_player/utils.dart';
 import 'package:flutter/painting.dart';
 
 /// from index.json
@@ -24,7 +24,7 @@ class AudioLibrary {
 
   /// must call [initFromIndex]
   static AudioLibrary get instance {
-    _instance ?? AudioLibrary._([]);
+    _instance ??= AudioLibrary._([]);
     return _instance!;
   }
 
@@ -345,6 +345,38 @@ class Audio {
       (composer?.trim().isNotEmpty ?? false) ||
       (arranger?.trim().isNotEmpty ?? false);
 
+  bool get hasKnownArtist =>
+      artist.trim().isNotEmpty && artist != "UNKNOWN" && artist != "未知艺术家";
+
+  bool get hasKnownAlbum =>
+      album.trim().isNotEmpty && album != "UNKNOWN" && album != "未知专辑";
+
+  String get displayTitle =>
+      title.trim().isNotEmpty ? title : _fallbackTitleFromPath(mediaPath);
+
+  String get displayArtist =>
+      hasKnownArtist ? splitedArtists.join(" / ") : "未知艺术家";
+
+  String get displayAlbum => hasKnownAlbum ? album : "未知专辑";
+
+  String get displayArtistAlbumLine {
+    final parts = <String>[];
+    if (hasKnownArtist) parts.add(displayArtist);
+    if (hasKnownAlbum) parts.add(displayAlbum);
+    return parts.isEmpty ? "未知艺术家" : parts.join(" · ");
+  }
+
+  void updateMetadata({
+    String? title,
+    String? artist,
+    String? album,
+  }) {
+    if (title != null) this.title = title;
+    if (artist != null) this.artist = artist;
+    if (album != null) this.album = album;
+    _normalizeCorruptedMetadata();
+  }
+
   /// 读取音乐文件的图片，自动适应缩放
   Future<ImageProvider?> _getResizedPic({
     required int width,
@@ -452,27 +484,42 @@ class Audio {
       title,
       fallback: _fallbackTitleFromPath(mediaPath),
     );
-    artist = _sanitizeMetadataText(artist, fallback: "UNKNOWN");
-    album = _sanitizeMetadataText(album, fallback: "UNKNOWN");
-    splitedArtists =
-        artist.split(RegExp(AppSettings.instance.artistSplitPattern));
+    artist = _sanitizeMetadataText(artist, fallback: "未知艺术家");
+    album = _sanitizeMetadataText(album, fallback: "未知专辑");
+    splitedArtists = _normalizeArtistNames(artist);
+    if (splitedArtists.isEmpty) {
+      splitedArtists = ["未知艺术家"];
+    }
+    artist = splitedArtists.join(" / ");
+  }
+
+  static List<String> _normalizeArtistNames(String input) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final raw
+        in input.split(RegExp(AppSettings.instance.artistSplitPattern))) {
+      final name = _sanitizeMetadataText(raw, fallback: "").trim();
+      if (name.isEmpty || name == "UNKNOWN" || name == "未知艺术家") continue;
+      if (seen.add(name.toLowerCase())) result.add(name);
+    }
+    return result;
   }
 
   static String _sanitizeMetadataText(
     String input, {
     required String fallback,
   }) {
-    final trimmed = input.trim();
-    if (trimmed.isEmpty) return fallback;
-    if (trimmed == "UNKNOWN") return fallback;
+    if (input.trim().isEmpty) return fallback;
+    final repaired = _repairUtf8Mojibake(input).trim();
+    if (repaired == "UNKNOWN") return fallback;
 
     // 常见损坏字符：replacement char / BOM / 控制字符 / 常见乱码占位。
     final hasCorruptedToken = RegExp(
       r'[\uFFFD\uFEFF\u0000-\u001F]|锟斤拷|�',
-    ).hasMatch(trimmed);
+    ).hasMatch(repaired);
 
-    if (!hasCorruptedToken) return trimmed;
-    final cleaned = trimmed
+    if (!hasCorruptedToken) return repaired;
+    final cleaned = repaired
         .replaceAll(RegExp(r'[\uFFFD\uFEFF\u0000-\u001F]'), '')
         .replaceAll('锟斤拷', '')
         .replaceAll('�', '')
@@ -480,6 +527,52 @@ class Audio {
     if (cleaned.isEmpty) return fallback;
     return cleaned;
   }
+
+  static String _repairUtf8Mojibake(String input) {
+    final bytes = <int>[];
+    for (final rune in input.runes) {
+      final byte = _windows1252ReverseMap[rune] ?? (rune <= 0xFF ? rune : null);
+      if (byte == null) return input;
+      bytes.add(byte);
+    }
+
+    try {
+      final decoded = utf8.decode(bytes, allowMalformed: false);
+      return decoded == input ? input : decoded;
+    } on FormatException {
+      return input;
+    }
+  }
+
+  static const Map<int, int> _windows1252ReverseMap = {
+    0x20AC: 0x80,
+    0x201A: 0x82,
+    0x0192: 0x83,
+    0x201E: 0x84,
+    0x2026: 0x85,
+    0x2020: 0x86,
+    0x2021: 0x87,
+    0x02C6: 0x88,
+    0x2030: 0x89,
+    0x0160: 0x8A,
+    0x2039: 0x8B,
+    0x0152: 0x8C,
+    0x017D: 0x8E,
+    0x2018: 0x91,
+    0x2019: 0x92,
+    0x201C: 0x93,
+    0x201D: 0x94,
+    0x2022: 0x95,
+    0x2013: 0x96,
+    0x2014: 0x97,
+    0x02DC: 0x98,
+    0x2122: 0x99,
+    0x0161: 0x9A,
+    0x203A: 0x9B,
+    0x0153: 0x9C,
+    0x017E: 0x9E,
+    0x0178: 0x9F,
+  };
 
   static String _fallbackTitleFromPath(String path) {
     final normalized = path.replaceAll('\\', '/');

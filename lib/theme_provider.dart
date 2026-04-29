@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/src/rust/api/album_palette.dart'
-    as rust_palette;
-import 'package:coriander_player/theme/album_palette.dart';
-import 'package:coriander_player/theme/app_theme.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/src/rust/api/album_palette.dart' as rust_palette;
+import 'package:qisheng_player/theme/album_palette.dart';
+import 'package:qisheng_player/theme/app_theme.dart';
+import 'package:qisheng_player/window_controls.dart';
 import 'package:flutter/material.dart';
 
 Color resolveThemeDominantColor({
@@ -19,31 +19,48 @@ Color resolveThemeDominantColor({
 List<Color> buildDynamicBackgroundGradient(Color dominantColor) {
   final hsl = HSLColor.fromColor(dominantColor);
   final normalized = hsl
-      .withSaturation(hsl.saturation.clamp(0.24, 0.62).toDouble())
-      .withLightness(hsl.lightness.clamp(0.26, 0.42).toDouble())
+      .withSaturation(hsl.saturation.clamp(0.34, 0.68).toDouble())
+      .withLightness(hsl.lightness.clamp(0.38, 0.56).toDouble())
       .toColor();
-  // 现代简约：更深邃的背景渐变，降低 dominant 色混合比例
-  final top = Color.lerp(const Color(0xFF0C1219), normalized, 0.32)!;
-  final middle = Color.lerp(const Color(0xFF040609), normalized, 0.18)!;
-  final bottom = Color.lerp(const Color(0xFF010203), normalized, 0.06)!;
+  const deepNavy = Color(0xFF061321);
+  const inkBlue = Color(0xFF0B2034);
+  const tealHaze = Color(0xFF0A4A57);
+
+  final top = Color.lerp(
+    deepNavy,
+    Color.lerp(const Color(0xFF0F3045), normalized, 0.26)!,
+    0.48,
+  )!;
+  final middle = Color.lerp(
+    inkBlue,
+    Color.lerp(tealHaze, normalized, 0.3)!,
+    0.5,
+  )!;
+  final bottom = Color.lerp(
+    const Color(0xFF041A24),
+    Color.lerp(const Color(0xFF063C44), normalized, 0.24)!,
+    0.42,
+  )!;
   return [top, middle, bottom];
 }
 
-// 现代简约：玻璃色调更柔和淡雅
 Color buildGlassTint(Color dominantColor, Brightness brightness) {
   final hsl = HSLColor.fromColor(dominantColor);
   final normalized = hsl
-      .withSaturation(hsl.saturation.clamp(0.16, 0.44).toDouble())
+      .withSaturation(hsl.saturation.clamp(0.2, 0.48).toDouble())
       .withLightness(
         brightness == Brightness.dark
-            ? hsl.lightness.clamp(0.72, 0.82).toDouble()
-            : hsl.lightness.clamp(0.24, 0.36).toDouble(),
+            ? hsl.lightness.clamp(0.68, 0.82).toDouble()
+            : hsl.lightness.clamp(0.32, 0.48).toDouble(),
       )
       .toColor();
+  final glassAnchor = brightness == Brightness.dark
+      ? const Color(0xFF55F0FF)
+      : const Color(0xFF087C8E);
   return Color.lerp(
     normalized,
-    brightness == Brightness.dark ? Colors.white : Colors.black,
-    brightness == Brightness.dark ? 0.12 : 0.06,
+    glassAnchor,
+    brightness == Brightness.dark ? 0.22 : 0.1,
   )!;
 }
 
@@ -79,6 +96,10 @@ class ThemeProvider extends ChangeNotifier {
 
   UiEffectsLevel uiEffectsLevel = AppSettings.instance.uiEffectsLevel;
   UiVisualStyleMode visualStyleMode = AppSettings.instance.uiVisualStyleMode;
+  WindowBackdropMode windowBackdropMode =
+      AppSettings.instance.windowBackdropMode;
+  WindowBackdropModeResult? windowBackdropResult =
+      WindowControls.lastBackdropResult;
   ThemeMode themeMode = AppSettings.instance.themeMode;
   String? fontFamily = AppSettings.instance.fontFamily;
 
@@ -199,6 +220,18 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     await AppSettings.instance.saveSettings();
     await _syncDesktopLyricTheme();
+  }
+
+  Future<WindowBackdropModeResult> applyWindowBackdropMode(
+    WindowBackdropMode mode,
+  ) async {
+    final result = await WindowControls.setWindowBackdropMode(mode);
+    windowBackdropMode = mode;
+    windowBackdropResult = result;
+    AppSettings.instance.windowBackdropMode = mode;
+    notifyListeners();
+    await AppSettings.instance.saveSettings();
+    return result;
   }
 
   Future<void> _applyDynamicTheme(Audio audio, int requestId) async {

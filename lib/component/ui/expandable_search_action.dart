@@ -1,6 +1,9 @@
-import 'package:coriander_player/component/responsive_builder.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+﻿import 'dart:async';
+
+import 'package:qisheng_player/component/responsive_builder.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/hotkeys_helper.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -25,10 +28,24 @@ class _ExpandableSearchActionState extends State<ExpandableSearchAction> {
   bool expanded = false;
 
   @override
+  void initState() {
+    super.initState();
+    focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
   void dispose() {
+    if (focusNode.hasFocus) {
+      unawaited(HotkeysHelper.onFocusChanges(false));
+    }
+    focusNode.removeListener(_handleFocusChanged);
     controller.dispose();
     focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    unawaited(HotkeysHelper.onFocusChanges(focusNode.hasFocus));
   }
 
   void _toggleExpanded(bool value) {
@@ -120,8 +137,8 @@ class _ExpandableSearchActionState extends State<ExpandableSearchAction> {
                                         ? Symbols.close
                                         : Symbols.close_small,
                                     size: 18,
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.72),
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.72),
                                   ),
                                 ),
                               );
@@ -180,8 +197,8 @@ class _ExpandableSearchActionState extends State<ExpandableSearchAction> {
                                         ? Symbols.close
                                         : Symbols.close_small,
                                     size: compact ? 18 : 24,
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.72),
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.72),
                                   ),
                                 ),
                               ],

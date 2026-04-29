@@ -1,9 +1,9 @@
-import 'dart:io';
+﻿import 'dart:io';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/component/ui/liquid_gradient_background.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
-import 'package:coriander_player/theme_provider.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/component/ui/liquid_gradient_background.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -52,14 +52,14 @@ class MainLayoutFrame extends StatelessWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(
             chrome.shellGap,
-            16,
+            12,
             chrome.shellGap,
             0,
           ),
           child: Column(
             children: [
               titleBar,
-              SizedBox(height: chrome.shellGap),
+              _SilentShellGap(height: chrome.shellGap),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: dockInset),
@@ -82,6 +82,13 @@ class MainLayoutFrame extends StatelessWidget {
           Positioned(
             left: chrome.shellGap,
             right: chrome.shellGap,
+            bottom: chrome.shellGap + chrome.dockHeight,
+            child: _SilentDockGap(height: chrome.shellGap),
+          ),
+        if (overlay != null)
+          Positioned(
+            left: chrome.shellGap,
+            right: chrome.shellGap,
             bottom: chrome.shellGap,
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -92,6 +99,37 @@ class MainLayoutFrame extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _SilentShellGap extends StatelessWidget {
+  const _SilentShellGap({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: const AbsorbPointer(child: SizedBox.expand()),
+    );
+  }
+}
+
+class _SilentDockGap extends StatelessWidget {
+  const _SilentDockGap({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    if (height <= 0) return const SizedBox.shrink();
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: const AbsorbPointer(child: SizedBox.expand()),
     );
   }
 }

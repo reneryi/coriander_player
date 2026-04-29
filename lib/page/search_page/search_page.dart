@@ -1,6 +1,6 @@
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/hotkeys_helper.dart';
-import 'package:coriander_player/library/audio_library.dart';
+﻿import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/hotkeys_helper.dart';
+import 'package:qisheng_player/library/audio_library.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -15,9 +15,10 @@ class UnionSearchResult {
   UnionSearchResult(this.query);
 
   static UnionSearchResult search(String query) {
-    final result = UnionSearchResult(query);
+    final trimmed = query.trim();
+    final result = UnionSearchResult(trimmed);
 
-    final queryInLowerCase = query.toLowerCase();
+    final queryInLowerCase = trimmed.toLowerCase();
     final library = AudioLibrary.instance;
     final audioKeys = <String>{};
     final artistKeys = <String>{};
@@ -103,12 +104,11 @@ class SearchPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return ColoredBox(
-      color: scheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               "搜索",
@@ -118,7 +118,7 @@ class SearchPage extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const Padding(padding: EdgeInsets.only(bottom: 32.0)),
+            const SizedBox(height: 32),
             SizedBox(
               width: 400,
               child: Focus(
@@ -135,12 +135,12 @@ class SearchPage extends StatelessWidget {
                       hintText: "搜索歌曲、艺术家、专辑",
                       border: OutlineInputBorder(),
                     ),
-
-                    /// when 'enter' is pressed
                     onSubmitted: (String query) {
+                      final trimmed = query.trim();
+                      if (trimmed.isEmpty) return;
                       context.push(
-                        app_paths.SEARCH_RESULT_PAGE,
-                        extra: UnionSearchResult.search(query),
+                        app_paths.buildSearchResultLocation(trimmed),
+                        extra: UnionSearchResult.search(trimmed),
                       );
                     },
                   ),

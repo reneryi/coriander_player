@@ -1,34 +1,35 @@
-// ignore_for_file: camel_case_types, unused_element
+﻿// ignore_for_file: camel_case_types, unused_element
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/app_preference.dart';
-import 'package:coriander_player/component/bottom_player_bar.dart';
-import 'package:coriander_player/component/main_layout_frame.dart';
-import 'package:coriander_player/component/ui/app_surface.dart';
-import 'package:coriander_player/component/title_bar.dart';
-import 'package:coriander_player/utils.dart';
-import 'package:coriander_player/library/audio_library.dart';
-import 'package:coriander_player/library/online_cover_store.dart';
-import 'package:coriander_player/library/playlist.dart';
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/navigation_state.dart';
-import 'package:coriander_player/page/now_playing_page/component/current_playlist_view.dart';
-import 'package:coriander_player/page/now_playing_page/component/vertical_lyric_view.dart';
-import 'package:coriander_player/app_paths.dart' as app_paths;
-import 'package:coriander_player/play_service/desktop_lyric_service.dart';
-import 'package:coriander_player/play_service/lyric_service.dart';
-import 'package:coriander_player/play_service/playback_service.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/component/bottom_player_bar.dart';
+import 'package:qisheng_player/component/main_layout_frame.dart';
+import 'package:qisheng_player/component/now_playing_artwork_hero.dart';
+import 'package:qisheng_player/component/ui/app_surface.dart';
+import 'package:qisheng_player/component/title_bar.dart';
+import 'package:qisheng_player/component/window_drag_region.dart';
+import 'package:qisheng_player/utils.dart';
+import 'package:qisheng_player/library/audio_library.dart';
+import 'package:qisheng_player/library/online_cover_store.dart';
+import 'package:qisheng_player/library/playlist.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/navigation_state.dart';
+import 'package:qisheng_player/page/now_playing_page/component/current_playlist_view.dart';
+import 'package:qisheng_player/page/now_playing_page/component/vertical_lyric_view.dart';
+import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/play_service/desktop_lyric_service.dart';
+import 'package:qisheng_player/play_service/lyric_service.dart';
+import 'package:qisheng_player/play_service/playback_service.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
-import 'package:window_manager/window_manager.dart';
 
 part 'small_page.dart';
 part 'large_page.dart';
@@ -53,6 +54,84 @@ final NOW_PLAYING_VIEW_MODE = ValueNotifier(
   AppPreference.instance.nowPlayingPagePref.nowPlayingViewMode,
 );
 
+class NowPlayingRouteTransitionScope
+    extends InheritedNotifier<Animation<double>> {
+  const NowPlayingRouteTransitionScope({
+    super.key,
+    required Animation<double> animation,
+    required super.child,
+  }) : super(notifier: animation);
+
+  static Animation<double>? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<NowPlayingRouteTransitionScope>()
+        ?.notifier;
+  }
+}
+
+Animation<double> _nowPlayingRouteStageAnimation(
+  BuildContext context, {
+  required double begin,
+  required double end,
+  Curve curve = Curves.easeOutCubic,
+  Curve reverseCurve = Curves.easeInCubic,
+}) {
+  final routeAnimation = NowPlayingRouteTransitionScope.maybeOf(context);
+  if (routeAnimation == null) {
+    return const AlwaysStoppedAnimation(1);
+  }
+  return CurvedAnimation(
+    parent: routeAnimation,
+    curve: Interval(begin, end, curve: curve),
+    reverseCurve: Interval(begin, end, curve: reverseCurve),
+  );
+}
+
+class _NowPlayingStagedReveal extends StatelessWidget {
+  const _NowPlayingStagedReveal({
+    required this.begin,
+    required this.end,
+    required this.child,
+    this.beginOffset = const Offset(0, 0.04),
+    this.beginScale = 1.0,
+  });
+
+  final double begin;
+  final double end;
+  final Widget child;
+  final Offset beginOffset;
+  final double beginScale;
+
+  @override
+  Widget build(BuildContext context) {
+    final routeAnimation = NowPlayingRouteTransitionScope.maybeOf(context);
+    if (routeAnimation == null) return child;
+
+    final staged = _nowPlayingRouteStageAnimation(
+      context,
+      begin: begin,
+      end: end,
+    );
+
+    return FadeTransition(
+      opacity: staged,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: beginOffset,
+          end: Offset.zero,
+        ).animate(staged),
+        child: ScaleTransition(
+          scale: Tween<double>(
+            begin: beginScale,
+            end: 1,
+          ).animate(staged),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 class NowPlayingPage extends StatelessWidget {
   const NowPlayingPage({super.key});
 
@@ -62,7 +141,7 @@ class NowPlayingPage extends StatelessWidget {
         AppPreference.instance.nowPlayingPagePref.nowPlayingViewMode;
     return MainLayoutFrame(
       titleBar: const _NowPlayingAppBar(),
-      overlay: const BottomPlayerBar(),
+      overlay: const _AutoHideBottomPlayerBar(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 1040 ||
@@ -76,71 +155,162 @@ class NowPlayingPage extends StatelessWidget {
   }
 }
 
+class _AutoHideBottomPlayerBar extends StatefulWidget {
+  const _AutoHideBottomPlayerBar();
+
+  @override
+  State<_AutoHideBottomPlayerBar> createState() =>
+      _AutoHideBottomPlayerBarState();
+}
+
+class _AutoHideBottomPlayerBarState extends State<_AutoHideBottomPlayerBar> {
+  static const _hideDelay = Duration(seconds: 5);
+  static const _entranceRevealThreshold = 0.82;
+
+  Timer? _hideTimer;
+  Animation<double>? _routeAnimation;
+  bool _entranceCompleted = false;
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  void _scheduleHide() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(_hideDelay, () {
+      if (!mounted) return;
+      setState(() => _visible = false);
+    });
+  }
+
+  void _showAndKeepAlive() {
+    if (!_entranceCompleted) return;
+    if (!_visible) {
+      setState(() => _visible = true);
+    }
+    _scheduleHide();
+  }
+
+  void _handleRouteAnimationTick() {
+    final shouldReveal = _routeAnimation == null ||
+        _routeAnimation!.value >= _entranceRevealThreshold;
+    if (shouldReveal == _entranceCompleted) return;
+
+    _entranceCompleted = shouldReveal;
+    _hideTimer?.cancel();
+    if (!mounted) return;
+    setState(() => _visible = shouldReveal);
+    if (shouldReveal) {
+      _scheduleHide();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextAnimation = NowPlayingRouteTransitionScope.maybeOf(context);
+    if (!identical(nextAnimation, _routeAnimation)) {
+      _routeAnimation?.removeListener(_handleRouteAnimationTick);
+      _routeAnimation = nextAnimation;
+      _routeAnimation?.addListener(_handleRouteAnimationTick);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _handleRouteAnimationTick();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _routeAnimation?.removeListener(_handleRouteAnimationTick);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = context.motion;
+    return SizedBox(
+      height: context.chrome.dockHeight,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          IgnorePointer(
+            ignoring: !_entranceCompleted,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _showAndKeepAlive,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          IgnorePointer(
+            ignoring: !_visible || !_entranceCompleted,
+            child: Listener(
+              onPointerDown: (_) => _showAndKeepAlive(),
+              onPointerMove: (_) => _showAndKeepAlive(),
+              onPointerSignal: (_) => _showAndKeepAlive(),
+              child: MouseRegion(
+                onEnter: (_) => _showAndKeepAlive(),
+                onHover: (_) => _showAndKeepAlive(),
+                child: AnimatedSlide(
+                  duration: motion.panelTransitionDuration,
+                  curve: motion.normal,
+                  offset: _visible ? Offset.zero : const Offset(0, 0.24),
+                  child: AnimatedOpacity(
+                    duration: motion.controlTransitionDuration,
+                    curve: motion.fast,
+                    opacity: _visible ? 1 : 0,
+                    child: const BottomPlayerBar(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NowPlayingAppBar extends StatelessWidget {
   const _NowPlayingAppBar();
 
   @override
   Widget build(BuildContext context) {
-    return AppSurface(
-      variant: AppSurfaceVariant.glass,
-      radius: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final scheme = Theme.of(context).colorScheme;
-
-          return Row(
-            children: [
-              const _NowPlayingBackBtn(),
-              const SizedBox(width: 10),
-              Expanded(
-                child: DragToMoveArea(
-                  child: Selector<PlaybackController, Audio?>(
-                    selector: (_, playbackService) =>
-                        playbackService.nowPlaying,
-                    builder: (context, nowPlaying, _) {
-                      return Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nowPlaying?.title ?? 'Now Playing',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: scheme.onSurface,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            nowPlaying == null
-                                ? 'Coriander Player'
-                                : '${nowPlaying.artist} - ${nowPlaying.album}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+    final chrome = context.chrome;
+    return _NowPlayingStagedReveal(
+      begin: 0.12,
+      end: 0.48,
+      beginOffset: const Offset(0, -0.035),
+      beginScale: 0.985,
+      child: AppSurface(
+        variant: AppSurfaceVariant.glass,
+        radius: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: SizedBox(
+          height: chrome.titleBarHeight,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return const Row(
+                children: [
+                  _NowPlayingBackBtn(),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: WindowDragRegion(
+                      child: SizedBox.expand(),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const NowPlayingDesktopLyricAction(),
-              const SizedBox(width: 4),
-              const NowPlayingMoreMenuAction(),
-              const SizedBox(width: 8),
-              const WindowControlls(),
-            ],
-          );
-        },
+                  SizedBox(width: 8),
+                  NowPlayingMoreMenuAction(),
+                  SizedBox(width: 8),
+                  WindowControlls(),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -152,18 +322,12 @@ class _NowPlayingBackBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
+      enableFeedback: false,
       tooltip: '返回',
       onPressed: () {
-        final fallback = AppNavigationState.instance.lastShellLocation;
-        if (fallback.isNotEmpty && fallback != app_paths.NOW_PLAYING_PAGE) {
-          context.go(fallback);
-          return;
-        }
-        if (context.canPop()) {
-          context.pop();
-          return;
-        }
-        context.go(app_paths.AUDIOS_PAGE);
+        final navigation = AppNavigationState.instance;
+        navigation.closeNowPlaying(context,
+            fallback: navigation.lastShellLocation);
       },
       icon: const Icon(Symbols.navigate_before),
     );
@@ -181,6 +345,7 @@ class _NowPlayingMoreAction extends StatelessWidget {
 
     if (nowPlaying == null) {
       return IconButton(
+        enableFeedback: false,
         tooltip: '更多操作',
         onPressed: null,
         icon: const Icon(Symbols.more_vert),
@@ -301,7 +466,7 @@ class _NowPlayingMoreAction extends StatelessWidget {
         MenuItemButton(
           onPressed: () async {
             if (nowPlaying.isCueTrack) {
-              showTextOnSnackBar('CUE 分轨不支持直接删除，请删除源文件。');
+              showTextOnSnackBar('CUE 分轨不支持直接删除，请删除源文件　');
               return;
             }
             final confirm = await showDialog<bool>(
@@ -342,6 +507,7 @@ class _NowPlayingMoreAction extends StatelessWidget {
         ),
       ],
       builder: (context, controller, _) => IconButton(
+        enableFeedback: false,
         tooltip: '更多操作',
         onPressed: () {
           if (controller.isOpen) {
@@ -368,7 +534,8 @@ class _DesktopLyricSwitch extends StatelessWidget {
         return FutureBuilder(
           future: desktopLyricService.desktopLyric,
           builder: (context, snapshot) => IconButton(
-            tooltip: '桌面歌词：${snapshot.data == null ? '已关闭' : '已开启'}',
+            enableFeedback: false,
+            tooltip: '桌面歌词${snapshot.data == null ? "已关闭" : "已开启"}',
             onPressed: !desktopLyricService.isStarting &&
                     snapshot.connectionState == ConnectionState.done
                 ? snapshot.data == null
@@ -407,7 +574,7 @@ class _MarqueeText extends StatelessWidget {
 
   String _sanitizeText(String value) {
     final cleaned = value
-        // 移除控制字符、BOM、替代字符，避免滚动文本出现异常占位图形
+        // 移除控制字符、BOM銆佹浛浠ｅ瓧绗︼紝閬垮厤婊氬姩鏂囨湰鍑虹幇寮傚父鍗犱綅鍥惧舰
         .replaceAll(
           RegExp(r'[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFEFF\uFFFD]'),
           '',

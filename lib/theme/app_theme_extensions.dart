@@ -1,4 +1,4 @@
-import 'package:coriander_player/app_settings.dart';
+﻿import 'package:qisheng_player/app_settings.dart';
 import 'package:flutter/material.dart';
 
 enum AppBackdropStrategy {

@@ -1,7 +1,7 @@
-import 'package:coriander_player/app_settings.dart';
-import 'package:coriander_player/page/settings_page/theme_settings.dart';
-import 'package:coriander_player/theme/app_theme.dart';
-import 'package:coriander_player/theme_provider.dart';
+﻿import 'package:qisheng_player/app_settings.dart';
+import 'package:qisheng_player/page/settings_page/theme_settings.dart';
+import 'package:qisheng_player/theme/app_theme.dart';
+import 'package:qisheng_player/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

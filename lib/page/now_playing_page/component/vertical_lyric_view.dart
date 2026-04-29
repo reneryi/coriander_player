@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:coriander_player/lyric/lrc.dart';
-import 'package:coriander_player/lyric/lyric.dart';
-import 'package:coriander_player/page/now_playing_page/component/lyric_view_controls.dart';
-import 'package:coriander_player/page/now_playing_page/component/lyric_view_tile.dart';
-import 'package:coriander_player/play_service/play_service.dart';
-import 'package:coriander_player/theme/app_theme_extensions.dart';
+import 'package:qisheng_player/lyric/lrc.dart';
+import 'package:qisheng_player/lyric/lyric.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_controls_visibility.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_view_controls.dart';
+import 'package:qisheng_player/page/now_playing_page/component/lyric_view_tile.dart';
+import 'package:qisheng_player/play_service/play_service.dart';
+import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-bool ALWAYS_SHOW_LYRIC_VIEW_CONTROLS = false;
 
 class VerticalLyricView extends StatefulWidget {
   const VerticalLyricView({super.key});
@@ -20,14 +19,21 @@ class VerticalLyricView extends StatefulWidget {
 }
 
 class _VerticalLyricViewState extends State<VerticalLyricView> {
-  bool isHovering = false;
   final lyricViewController = LyricViewController();
+  late final LyricControlsVisibilityController visibilityController =
+      LyricControlsVisibilityController();
+
+  @override
+  void dispose() {
+    lyricViewController.dispose();
+    visibilityController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final motion = context.motion;
-    final showControls = isHovering || ALWAYS_SHOW_LYRIC_VIEW_CONTROLS;
 
     const loadingWidget = Center(
       child: SizedBox(
@@ -39,67 +45,73 @@ class _VerticalLyricViewState extends State<VerticalLyricView> {
 
     return MouseRegion(
       onEnter: (_) {
-        setState(() {
-          isHovering = true;
-        });
+        visibilityController.setRegionHovered(true);
       },
       onExit: (_) {
-        setState(() {
-          isHovering = false;
-        });
+        visibilityController.setRegionHovered(false);
       },
       child: Material(
         type: MaterialType.transparency,
         child: ScrollConfiguration(
           behavior: const ScrollBehavior().copyWith(scrollbars: false),
-          child: ChangeNotifierProvider.value(
-            value: lyricViewController,
+          child: MultiProvider(
+            providers: [
+              ChangeNotifierProvider.value(value: lyricViewController),
+              ChangeNotifierProvider.value(value: visibilityController),
+            ],
             child: ListenableBuilder(
               listenable: PlayService.instance.lyricService,
-              builder: (context, _) => FutureBuilder(
-                future: PlayService.instance.lyricService.currLyricFuture,
-                builder: (context, snapshot) {
-                  final lyricNullable = snapshot.data;
-                  final noLyricWidget = Center(
-                    child: Text(
-                      "暂无歌词",
-                      style: TextStyle(
-                        fontSize: 22,
-                        color: scheme.onSecondaryContainer,
-                      ),
-                    ),
-                  );
-
-                  return Stack(
-                    children: [
-                      switch (snapshot.connectionState) {
-                        ConnectionState.none => loadingWidget,
-                        ConnectionState.waiting => loadingWidget,
-                        ConnectionState.active => loadingWidget,
-                        ConnectionState.done => lyricNullable == null
-                            ? noLyricWidget
-                            : _VerticalLyricScrollView(lyric: lyricNullable),
-                      },
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: IgnorePointer(
-                          ignoring: !showControls,
-                          child: AnimatedSlide(
-                            duration: motion.controlTransitionDuration,
-                            curve: motion.normal,
-                            offset: showControls
-                                ? Offset.zero
-                                : const Offset(0.04, 0.08),
-                            child: AnimatedOpacity(
-                              duration: motion.controlTransitionDuration,
-                              curve: motion.fast,
-                              opacity: showControls ? 1 : 0,
-                              child: const LyricViewControls(),
-                            ),
+              builder: (context, _) => ListenableBuilder(
+                listenable: visibilityController,
+                builder: (context, __) {
+                  final showControls = visibilityController.visible;
+                  return FutureBuilder(
+                    future: PlayService.instance.lyricService.currLyricFuture,
+                    builder: (context, snapshot) {
+                      final lyricNullable = snapshot.data;
+                      final noLyricWidget = Center(
+                        child: Text(
+                          "暂无歌词",
+                          style: TextStyle(
+                            fontSize: 22,
+                            color: scheme.onSecondaryContainer,
                           ),
                         ),
-                      ),
-                    ],
+                      );
+
+                      return Stack(
+                        children: [
+                          switch (snapshot.connectionState) {
+                            ConnectionState.none => loadingWidget,
+                            ConnectionState.waiting => loadingWidget,
+                            ConnectionState.active => loadingWidget,
+                            ConnectionState.done => lyricNullable == null
+                                ? noLyricWidget
+                                : _VerticalLyricScrollView(
+                                    lyric: lyricNullable),
+                          },
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: IgnorePointer(
+                              ignoring: !showControls,
+                              child: AnimatedSlide(
+                                duration: motion.controlTransitionDuration,
+                                curve: motion.normal,
+                                offset: showControls
+                                    ? Offset.zero
+                                    : const Offset(0.04, 0.08),
+                                child: AnimatedOpacity(
+                                  duration: motion.controlTransitionDuration,
+                                  curve: motion.fast,
+                                  opacity: showControls ? 1 : 0,
+                                  child: const LyricViewControls(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   );
                 },
               ),
