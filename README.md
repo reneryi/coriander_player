@@ -18,60 +18,51 @@
 
 </div>
 
-栖声 (Qisheng Player) 是一款基于 **Flutter**、**Rust** 与 **BASS** 音频库构建的高颜值本地音乐播放器。本项目是对上游优秀开源项目 [Ferry-200/coriander_player](https://github.com/Ferry-200/coriander_player) 进行的二次开发与全面升级。经过深度的重构与优化，当前版本 (`v1.0.0`) 带来了极其现代化的 **玻璃拟态 (Glassmorphism)** 界面、丝滑的动画过渡效果、以及更强大的本地曲库管理功能。
+栖声 (Qisheng Player) 是一款基于 **Flutter**、**Rust** 与 **BASS** 音频库构建的本地音乐播放器。本项目是对上游优秀的开源项目 [Ferry-200/coriander_player](https://github.com/Ferry-200/coriander_player) 进行的二次开发。
+
+我们的核心目标是**打造一款更好看、更好用、更精致的本地播放器**。在原版项目强大的文件扫描与播放能力基础上，当前版本重构了全局的视觉界面、精修了交互动效，并着重修复了大量的中文/日韩文标签乱码问题。
 
 ---
 
-## ✨ 核心亮点与特性 (Features)
+## ✨ 核心特性与亮点
 
-我们对 UI 进行了全面翻新，引入了 Apple Music 风格的设计理念，并深入底层重构了多项核心功能。
-
-### 🎨 现代化的视觉与交互设计
-- **全局玻璃拟态 UI**：全应用统一的毛玻璃视觉风格，背景具备随专辑封面主色调动态变化的流体弥散光效果。
-- **极致的沉浸体验**：提供专属的“沉浸式 / 专业 Now Playing”页面，配合逐字歌词动效，带来绝佳的视听享受。
-- **平滑动效与过渡**：页面间的 shared-axis 转场、专辑封面的 Hero 共享元素动画，让每一次点击都丝滑流畅。
+### 🎨 视觉与交互焕新
+- **玻璃拟态 UI (Glassmorphism)**：全应用统一的毛玻璃半透明视觉风格，主背景会跟随当前播放专辑的主色调缓慢流转。
+- **顺滑的转场体验**：加入了页面间的平滑淡入淡出（shared-axis）过渡，以及专辑封面被点击时的 Hero 共享元素动画，让每一次操作更跟手。
+- **精心优化的布局**：侧边栏改为悬浮胶囊形态，重新排布了底部播放控制区的控件，让操作逻辑更直观。
 
 <p align="center">
   <img src="docs/screenshots/music.png" width="48%" />
   <img src="docs/screenshots/album.png" width="48%" />
 </p>
 
-### 🎶 极致的本地曲库管理
-- **海量音乐秒级加载**：依托 Rust 编写的高效底层，支持多文件夹扫描与智能索引缓存，告别卡顿。
-- **多维度浏览与定位**：内置 A-Z / 拼音索引，支持全局搜索、多选操作，以及按添加时间、艺术家、专辑等多维度排序。
-- **丰富的元数据编辑**：支持右键快速编辑 ID3 标签、封面（支持从文件选取或内置图库挑选）和内嵌歌词。
+### 🎧 沉浸式播放体验
+- **Now Playing 页面**：提供沉浸式/专业式正在播放视图，支持竖向与横向歌词滚动，带有字重放大与透明度发光变化的逐字歌词动效。
+- **多端歌词显示**：不仅支持独立的桌面悬浮歌词，还在主界面的音乐页新增了可随时展开的右侧迷你歌词预览栏。
 
 <p align="center">
   <img src="docs/screenshots/music_player.png" width="48%" />
-  <img src="docs/screenshots/album_detail.png" width="48%" />
-</p>
-
-### 🎧 专业级音频与播放队列
-- **全格式兼容**：完美支持 MP3, FLAC, WAV, APE, OGG, AAC, OPUS, DSD 等主流与无损格式。
-- **高级音频控制**：支持 ReplayGain 音量均衡、CUE 分轨读取，并提供强大的 **专业均衡器 (EQ)** 供发烧友细调听感。
-- **灵活的队列管理**：支持单曲循环、列表循环、随机播放，可自由拖拽重排，并提供精细的播放次数与习惯统计。
-
-<p align="center">
-  <img src="docs/screenshots/artist.png" width="48%" />
-  <img src="docs/screenshots/artist_detail.png" width="48%" />
-</p>
-
-### 📝 完善的歌单与歌词系统
-- **动态逐字歌词**：支持本地歌词（LRC/UTF-8/UTF-16）、在线匹配获取，并提供带有发光特效的逐字动效与外语翻译切换。
-- **多端同步显示**：内置桌面悬浮歌词以及右侧侧边栏的歌词预览功能。
-- **灵活的歌单管理**：支持创建自定义歌单，并提供直观的歌单编辑与封面选择功能。
-
-<p align="center">
-  <img src="docs/screenshots/lyric_selection.png" width="48%" />
   <img src="docs/screenshots/desktop_lyric.png" width="48%" />
 </p>
+
+### 🎶 强大的本地曲库管理
+- **高效的扫描引擎**：依托 Rust 编写的高效底层，支持多文件夹扫描与智能索引缓存。
+- **多维分类浏览**：内置 A-Z / 拼音索引，支持全局搜索，可按艺术家、专辑、文件夹或自定义排序进行浏览。
+- **乱码修复与元数据编辑**：底层修复了常见的 UTF-8 / Latin-1 编码冲突，极大地改善了历史音乐文件的乱码现象；支持右键编辑音乐的 ID3 标签、封面图和内嵌歌词。
+
+<p align="center">
+  <img src="docs/screenshots/album_detail.png" width="48%" />
+  <img src="docs/screenshots/artist.png" width="48%" />
+</p>
+
 <p align="center">
   <img src="docs/screenshots/music_edit.png" width="80%" />
 </p>
 
-### ⚙️ 深度系统集成
-- **全局快捷键**：支持自定义应用内与全局后台快捷键（支持媒体键响应）。
-- **硬件适配**：支持鼠标侧键控制、系统托盘（System Tray）、任务栏缩略图控制（Thumbnail Toolbar）、窗口自由拖拽与缩放。
+### ⚙️ 格式兼容与系统级集成
+- **全格式兼容**：完美支持 MP3, FLAC, WAV, APE, OGG, AAC, OPUS, DSD 等主流与无损格式，并支持 CUE 分轨文件。
+- **播放与队列管理**：支持 ReplayGain 音量均衡；支持单曲循环、列表循环、随机播放等模式，队列支持自由拖拽重排。
+- **全局融合**：支持自定义应用内与全局快捷键（响应媒体键），支持鼠标侧键、系统托盘及任务栏缩略图控制。
 
 ---
 
