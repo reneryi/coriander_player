@@ -67,6 +67,13 @@ Set-Location ..\..
 powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1 -Version 1.0.0
 ```
 
+如果桌面歌词的 `flutter build windows --release` 在当前机器上不稳定，但你已经有一份可用的
+`dist/windows/package/desktop_lyric/`，可以复用现有整合目录来继续生成 zip 和安装器：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1 -Version 1.0.0 -ReuseExistingPackage
+```
+
 输出文件：
 
 - `dist/windows/artifacts/packages/Qisheng-Player-v1.0.0-Windows-x64.zip`

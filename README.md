@@ -134,6 +134,12 @@ Set-Location ..\..
 powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1 -Version 1.0.0
 ```
 
+如果桌面歌词构建在当前机器上不稳定，但 `dist/windows/package/desktop_lyric/` 已经有可用产物，可以直接复用现有整合目录继续出包：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/release/package_release_windows.ps1 -Version 1.0.0 -ReuseExistingPackage
+```
+
 发布产物输出到 `dist/windows/artifacts/packages/`：
 
 - `Qisheng-Player-v1.0.0-Windows-x64.zip`

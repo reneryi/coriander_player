@@ -1,5 +1,6 @@
 param(
-  [string]$Version
+  [string]$Version,
+  [switch]$ReuseExistingPackage
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +44,42 @@ function Get-IsccPath {
   throw "Inno Setup compiler (ISCC.exe) not found. Install Inno Setup 6 first."
 }
 
+function Resolve-DesktopLyricSourceDir {
+  param(
+    [string]$BuildOutputDir,
+    [string]$PackagedOutputDir,
+    [bool]$PreferPackagedOutput
+  )
+
+  $candidates = @()
+  if ($PreferPackagedOutput) {
+    $candidates += $PackagedOutputDir
+    $candidates += $BuildOutputDir
+  } else {
+    $candidates += $BuildOutputDir
+    $candidates += $PackagedOutputDir
+  }
+
+  foreach ($candidate in $candidates) {
+    if ([string]::IsNullOrWhiteSpace($candidate)) {
+      continue
+    }
+
+    if (!(Test-Path $candidate)) {
+      continue
+    }
+
+    $exePath = Join-Path $candidate "desktop_lyric.exe"
+    $runtimePath = Join-Path $candidate "flutter_windows.dll"
+    $dataPath = Join-Path $candidate "data"
+    if ((Test-Path $exePath) -and (Test-Path $runtimePath) -and (Test-Path $dataPath)) {
+      return $candidate
+    }
+  }
+
+  throw "desktop_lyric output not found. Checked: $BuildOutputDir ; $PackagedOutputDir"
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "..\..")).Path
 $pubspecPath = Join-Path $repoRoot "pubspec.yaml"
@@ -53,6 +90,7 @@ $distRoot = Join-Path $repoRoot "dist\windows"
 $mainReleaseDir = Join-Path $repoRoot "build\windows\x64\runner\Release"
 $desktopLyricReleaseDir = Join-Path $repoRoot "third_party\desktop_lyric\build\windows\x64\runner\Release"
 $releasePackageDir = Join-Path $distRoot "package"
+$existingDesktopLyricPackageDir = Join-Path $releasePackageDir "desktop_lyric"
 $artifactsRoot = Join-Path $distRoot "artifacts"
 $artifactPackagesDir = Join-Path $artifactsRoot "packages"
 $installerWorkDir = Join-Path $distRoot "installer_work"
@@ -63,27 +101,30 @@ if (!(Test-Path $mainReleaseDir)) {
 if (!(Test-Path (Join-Path $mainReleaseDir "qisheng_player.exe"))) {
   throw "Main release executable missing: $(Join-Path $mainReleaseDir 'qisheng_player.exe')"
 }
-if (!(Test-Path $desktopLyricReleaseDir)) {
-  throw "desktop_lyric release output not found: $desktopLyricReleaseDir"
-}
-if (!(Test-Path (Join-Path $desktopLyricReleaseDir "desktop_lyric.exe"))) {
-  throw "desktop_lyric executable missing: $(Join-Path $desktopLyricReleaseDir 'desktop_lyric.exe')"
-}
+
+$desktopLyricSourceDir = Resolve-DesktopLyricSourceDir `
+  -BuildOutputDir $desktopLyricReleaseDir `
+  -PackagedOutputDir $existingDesktopLyricPackageDir `
+  -PreferPackagedOutput $ReuseExistingPackage.IsPresent
 
 New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 
-if (Test-Path $releasePackageDir) {
+if (!$ReuseExistingPackage.IsPresent -and (Test-Path $releasePackageDir)) {
   Remove-Item $releasePackageDir -Recurse -Force
 }
 New-Item -ItemType Directory -Path $releasePackageDir -Force | Out-Null
 
 # Main application release files.
+Get-ChildItem -Path $releasePackageDir | Where-Object { $_.Name -ne "desktop_lyric" } | Remove-Item -Recurse -Force
 Copy-Item -Path (Join-Path $mainReleaseDir "*") -Destination $releasePackageDir -Recurse -Force
 
 # Bundled desktop lyric component.
 $desktopLyricTargetDir = Join-Path $releasePackageDir "desktop_lyric"
+if (Test-Path $desktopLyricTargetDir) {
+  Remove-Item $desktopLyricTargetDir -Recurse -Force
+}
 New-Item -ItemType Directory -Path $desktopLyricTargetDir -Force | Out-Null
-Copy-Item -Path (Join-Path $desktopLyricReleaseDir "*") -Destination $desktopLyricTargetDir -Recurse -Force
+Copy-Item -Path (Join-Path $desktopLyricSourceDir "*") -Destination $desktopLyricTargetDir -Recurse -Force
 
 New-Item -ItemType Directory -Path $artifactsRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $artifactPackagesDir -Force | Out-Null
@@ -198,6 +239,7 @@ if (Test-Path $legacySetupPath) {
 
 Write-Host "Version: $Version"
 Write-Host "Release package: $releasePackageDir"
+Write-Host "Desktop lyric source: $desktopLyricSourceDir"
 Write-Host "Portable zip: $zipPath"
 Write-Host "Installer exe: $setupPath"
 Write-Host "Packages dir: $artifactPackagesDir"
