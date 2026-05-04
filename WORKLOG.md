@@ -2,6 +2,28 @@
 
 本文件记录重要实现、验证结果与后续注意事项。
 
+## 2026-05-05 - qisheng_player v1.2.0 发布整合
+
+### 背景
+
+- 当前版本需要统一页面转场表现，并将艺术家页详情转场对齐专辑页和 Now Playing 页的共享元素动画。
+- 文件夹页和设置页在鼠标 hover 时存在频闪；最终采用稳定玻璃策略解决高频重绘问题。
+- 本轮需要作为 `1.2.0` 正式版本发布，确保 `1.1.0` 用户启动后能收到 GitHub Release 更新提示。
+
+### 实现
+
+- 新增艺术家头像 Hero tag，并将 `ArtistTile` 接入 artwork Hero 导航守卫，进入/返回艺术家详情页时头像平滑移动。
+- 将专辑页已有 Hero 守卫泛化为 artwork Hero，同时保留原专辑页 API 和已认可的返回动画。
+- 统一路由旧页面转场：旧页跟随新页进入同步模糊、向下位移、轻微缩放并淡出。
+- 文件夹页移除列表项路径 Tooltip，避免 tooltip 悬浮层与玻璃背景 hover 叠加。
+- `AppSurface` 新增 `AppSurfaceBackdropBehavior`，设置页分组使用 `preferStableGlass`，解决设置页 hover 频闪。
+- 更新 `pubspec.yaml`、`AppSettings.version`、`docs/changelog.md`、`docs/releases/v1.2.0.md`、`docs/releases/v1.2.0.json`、`docs/releases/README.md` 和发布流程文档。
+
+### 验证
+
+- `flutter analyze` 通过。
+- 发布前仍需执行 Windows Release 构建与 `tools/release/package_release_windows.ps1 -Version 1.2.0`，并将 GitHub Release 标记为正式版本而非预发布。
+
 ## 2026-05-01 - qisheng_player v1.1.0 发布整合
 
 ### 背景

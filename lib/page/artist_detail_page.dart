@@ -1,4 +1,5 @@
 import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/component/artist_artwork_hero.dart';
 import 'package:qisheng_player/component/cp/cp_components.dart';
 import 'package:qisheng_player/utils.dart';
 import 'package:qisheng_player/library/audio_library.dart';
@@ -25,6 +26,7 @@ class ArtistDetailPage extends StatelessWidget {
       pref: AppPreference.instance.artistDetailPagePref,
       primaryContent: artist,
       primaryPic: artist.picture,
+      primaryPicHeroTag: artistArtworkHeroTag(artist),
       backgroundPic: artist.works.isEmpty
           ? Future<ImageProvider?>.value()
           : artist.works.first.cover,

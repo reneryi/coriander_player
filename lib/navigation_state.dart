@@ -1,9 +1,9 @@
-﻿import 'package:qisheng_player/app_paths.dart' as app_paths;
+import 'package:qisheng_player/app_paths.dart' as app_paths;
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
-class AlbumArtworkHeroTransition {
-  const AlbumArtworkHeroTransition({
+class ArtworkHeroTransition {
+  const ArtworkHeroTransition({
     required this.tag,
     required this.sourceKey,
   });
@@ -11,6 +11,8 @@ class AlbumArtworkHeroTransition {
   final String? tag;
   final Object sourceKey;
 }
+
+typedef AlbumArtworkHeroTransition = ArtworkHeroTransition;
 
 class AppNavigationEntry {
   const AppNavigationEntry(this.location, {this.extra});
@@ -30,10 +32,13 @@ class AppNavigationState extends ChangeNotifier {
   ];
   int _historyIndex = 0;
   String? _pendingHistoryLocation;
-  bool _albumArtworkNavigationInFlight = false;
+  bool _artworkNavigationInFlight = false;
 
-  final ValueNotifier<AlbumArtworkHeroTransition?> albumArtworkHeroTransition =
+  final ValueNotifier<ArtworkHeroTransition?> albumArtworkHeroTransition =
       ValueNotifier(null);
+
+  ValueNotifier<ArtworkHeroTransition?> get artworkHeroTransition =>
+      albumArtworkHeroTransition;
 
   String get lastShellLocation => _lastShellLocation;
   bool get canGoBack => _historyIndex > 0;
@@ -46,11 +51,12 @@ class AppNavigationState extends ChangeNotifier {
 
   void rememberLocation(String location, {Object? extra}) {
     if (location != app_paths.ALBUM_DETAIL_PAGE &&
-        _albumArtworkNavigationInFlight) {
-      // Album detail may be dismissed via go()/shell navigation instead of pop().
+        location != app_paths.ARTIST_DETAIL_PAGE &&
+        _artworkNavigationInFlight) {
+      // Detail pages may be dismissed via go()/shell navigation instead of pop().
       // Release the hero guard so the source tile can be tapped again.
       albumArtworkHeroTransition.value = null;
-      _albumArtworkNavigationInFlight = false;
+      _artworkNavigationInFlight = false;
     }
 
     if (!_shouldTrackLocation(location)) {
@@ -199,10 +205,16 @@ class AppNavigationState extends ChangeNotifier {
   bool beginAlbumArtworkHeroNavigation({
     required String? tag,
     required Object sourceKey,
+  }) =>
+      beginArtworkHeroNavigation(tag: tag, sourceKey: sourceKey);
+
+  bool beginArtworkHeroNavigation({
+    required String? tag,
+    required Object sourceKey,
   }) {
-    if (_albumArtworkNavigationInFlight) return false;
-    _albumArtworkNavigationInFlight = true;
-    albumArtworkHeroTransition.value = AlbumArtworkHeroTransition(
+    if (_artworkNavigationInFlight) return false;
+    _artworkNavigationInFlight = true;
+    albumArtworkHeroTransition.value = ArtworkHeroTransition(
       tag: tag,
       sourceKey: sourceKey,
     );
@@ -210,14 +222,24 @@ class AppNavigationState extends ChangeNotifier {
   }
 
   void endAlbumArtworkHeroNavigation(Object sourceKey) {
+    endArtworkHeroNavigation(sourceKey);
+  }
+
+  void endArtworkHeroNavigation(Object sourceKey) {
     final active = albumArtworkHeroTransition.value;
     if (active == null || identical(active.sourceKey, sourceKey)) {
       albumArtworkHeroTransition.value = null;
-      _albumArtworkNavigationInFlight = false;
+      _artworkNavigationInFlight = false;
     }
   }
 
   bool canBuildAlbumArtworkHero({
+    required String tag,
+    Object? sourceKey,
+  }) =>
+      canBuildArtworkHero(tag: tag, sourceKey: sourceKey);
+
+  bool canBuildArtworkHero({
     required String tag,
     Object? sourceKey,
   }) {

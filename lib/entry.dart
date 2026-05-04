@@ -70,6 +70,11 @@ Widget _buildAppRouteTransition(
     curve: Curves.easeOutCubic,
     reverseCurve: Curves.easeInCubic,
   );
+  final outgoingContent = CurvedAnimation(
+    parent: secondaryAnimation,
+    curve: const Interval(0.0, 0.9, curve: Curves.easeOutCubic),
+    reverseCurve: const Interval(0.0, 0.78, curve: Curves.easeInCubic),
+  );
   final transitionedChild = provideNowPlayingScope
       ? NowPlayingRouteTransitionScope(animation: curvedAnim, child: child)
       : child;
@@ -90,14 +95,21 @@ Widget _buildAppRouteTransition(
             child: transitionedChild,
             builder: (context, child) {
               final progress = secondaryCurvedAnim.value;
+              final outgoingProgress = outgoingContent.value;
               return ImageFiltered(
                 imageFilter: ImageFilter.blur(
-                  sigmaX: 8 * progress,
-                  sigmaY: 8 * progress,
+                  sigmaX: 10 * progress,
+                  sigmaY: 10 * progress,
                 ),
                 child: Opacity(
-                  opacity: 1 - 0.3 * progress,
-                  child: child,
+                  opacity: 1 - 0.42 * outgoingProgress,
+                  child: Transform.translate(
+                    offset: Offset(0, 26 * outgoingProgress),
+                    child: Transform.scale(
+                      scale: 1 - 0.012 * outgoingProgress,
+                      child: child,
+                    ),
+                  ),
                 ),
               );
             },

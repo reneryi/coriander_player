@@ -64,6 +64,13 @@ void main() {
     expect(title.overflow, TextOverflow.ellipsis);
     expect(subtitle.maxLines, 1);
     expect(subtitle.overflow, TextOverflow.ellipsis);
-    expect(find.byTooltip(folder.path), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == folder.path,
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip(folder.path), findsNothing);
   });
 }

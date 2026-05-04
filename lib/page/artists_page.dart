@@ -18,7 +18,7 @@ class ArtistsPage extends StatelessWidget {
       subtitle: "${contentList.length} 位艺术家",
       contentList: contentList,
       contentBuilder: (_, item, __, multiSelectController) =>
-          ArtistTile(artist: item),
+          ArtistTile(artist: item, enableHero: true),
       enableShufflePlay: false,
       enableSortMethod: true,
       enableSortOrder: true,

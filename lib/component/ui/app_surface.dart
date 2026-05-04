@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 
 import 'package:qisheng_player/theme/app_theme_extensions.dart';
 import 'package:qisheng_player/theme_provider.dart';
@@ -18,6 +18,12 @@ enum AppSurfaceGlassDensity {
   high,
 }
 
+enum AppSurfaceBackdropBehavior {
+  themeDefault,
+  preferStableGlass,
+  forceBlur,
+}
+
 class AppSurface extends StatelessWidget {
   const AppSurface({
     super.key,
@@ -28,6 +34,7 @@ class AppSurface extends StatelessWidget {
     this.radius,
     this.clipBehavior = Clip.antiAlias,
     this.glassDensity = AppSurfaceGlassDensity.medium,
+    this.backdropBehavior = AppSurfaceBackdropBehavior.themeDefault,
   });
 
   final Widget child;
@@ -37,6 +44,7 @@ class AppSurface extends StatelessWidget {
   final double? radius;
   final Clip clipBehavior;
   final AppSurfaceGlassDensity glassDensity;
+  final AppSurfaceBackdropBehavior backdropBehavior;
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +58,13 @@ class AppSurface extends StatelessWidget {
     } catch (_) {}
 
     final resolvedRadius = radius ?? surfaces.radiusXl;
-    final content =
-        padding == null ? child : Padding(padding: padding!, child: child);
+    final contentChild = RepaintBoundary(child: child);
+    final content = padding == null
+        ? contentChild
+        : Padding(padding: padding!, child: contentChild);
     final shouldUseGlass = variant == AppSurfaceVariant.glass ||
         surfaces.backdropStrategy != AppBackdropStrategy.solid;
+    final applyBlur = _resolveApplyBlur(surfaces);
 
     final surface = shouldUseGlass
         ? _GlassSurface(
@@ -62,7 +73,7 @@ class AppSurface extends StatelessWidget {
             margin: margin,
             clipBehavior: clipBehavior,
             sigma: _resolveGlassSigma(surfaces) * _variantSigmaScale(),
-            applyBlur: surfaces.backdropStrategy != AppBackdropStrategy.solid,
+            applyBlur: applyBlur,
             tintColor: glassTint,
             shadowColor: surfaces.shadowColor,
             shadowBlur: surfaces.shadowBlurLg * surfaces.shadowDepthScale,
@@ -109,6 +120,15 @@ class AppSurface extends StatelessWidget {
       AppSurfaceVariant.raised => 0.88,
       AppSurfaceVariant.floating => 1.04,
       AppSurfaceVariant.glass => 1.0,
+    };
+  }
+
+  bool _resolveApplyBlur(AppSurfaceTokens surfaces) {
+    return switch (backdropBehavior) {
+      AppSurfaceBackdropBehavior.themeDefault =>
+        surfaces.backdropStrategy != AppBackdropStrategy.solid,
+      AppSurfaceBackdropBehavior.preferStableGlass => false,
+      AppSurfaceBackdropBehavior.forceBlur => true,
     };
   }
 

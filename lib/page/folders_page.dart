@@ -302,11 +302,13 @@ class AudioFolderTile extends StatelessWidget {
       audioFolder.modified * 1000,
     );
 
-    return Tooltip(
-      message: audioFolder.path,
+    return Semantics(
+      label: audioFolder.path,
+      button: true,
       child: AppSurface(
         variant: AppSurfaceVariant.glass,
         glassDensity: AppSurfaceGlassDensity.low,
+        backdropBehavior: AppSurfaceBackdropBehavior.preferStableGlass,
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(14),
         child: Material(
@@ -392,11 +394,13 @@ class _CompactAudioFolderTile extends StatelessWidget {
     final surfaces = context.surfaces;
     final display = parseFolderDisplay(audioFolder.path);
 
-    return Tooltip(
-      message: audioFolder.path,
+    return Semantics(
+      label: audioFolder.path,
+      button: true,
       child: AppSurface(
         variant: AppSurfaceVariant.glass,
         glassDensity: AppSurfaceGlassDensity.low,
+        backdropBehavior: AppSurfaceBackdropBehavior.preferStableGlass,
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         child: Material(
