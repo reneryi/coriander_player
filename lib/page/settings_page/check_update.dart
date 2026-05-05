@@ -41,9 +41,14 @@ Future<Release?> checkForNewRelease() async {
 }
 
 class StartupUpdatePrompt extends StatefulWidget {
-  const StartupUpdatePrompt({super.key, required this.child});
+  const StartupUpdatePrompt({
+    super.key,
+    required this.child,
+    this.checkForRelease = checkForNewRelease,
+  });
 
   final Widget child;
+  final Future<Release?> Function() checkForRelease;
 
   @override
   State<StartupUpdatePrompt> createState() => _StartupUpdatePromptState();
@@ -57,17 +62,28 @@ class _StartupUpdatePromptState extends State<StartupUpdatePrompt> {
     super.didChangeDependencies();
     if (_checked) return;
     _checked = true;
-    unawaited(_check());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_check());
+      }
+    });
   }
 
   Future<void> _check() async {
     try {
-      final release = await checkForNewRelease();
+      final release = await widget.checkForRelease();
       if (release == null) return;
       if (release.tagName == AppPreference.instance.ignoredUpdateTag) return;
       if (!mounted) return;
+      final hasDialogContext = await _waitForDialogContext();
+      if (!hasDialogContext || !mounted) {
+        LOGGER.w('[update check] navigator context unavailable');
+        return;
+      }
+      final dialogContext = _dialogContext;
+      if (dialogContext == null || !dialogContext.mounted) return;
       await showDialog(
-        context: context,
+        context: dialogContext,
         builder: (context) => NewestUpdateView(
           release: release,
           showIgnoreAction: true,
@@ -80,6 +96,22 @@ class _StartupUpdatePromptState extends State<StartupUpdatePrompt> {
     } catch (err, trace) {
       LOGGER.e("[update check] $err", stackTrace: trace);
     }
+  }
+
+  Future<bool> _waitForDialogContext() async {
+    for (var i = 0; i < 6; i++) {
+      if (_dialogContext != null) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      if (!mounted) return false;
+    }
+    return false;
+  }
+
+  BuildContext? get _dialogContext {
+    final overlayContext = ROUTER_KEY.currentState?.overlay?.context;
+    if (overlayContext != null) return overlayContext;
+    if (Navigator.maybeOf(context) != null) return context;
+    return null;
   }
 
   @override

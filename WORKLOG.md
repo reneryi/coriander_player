@@ -2,6 +2,26 @@
 
 本文件记录重要实现、验证结果与后续注意事项。
 
+## 2026-05-05 - qisheng_player v1.2.1 小补丁
+
+### 背景
+
+- 用户反馈 `v1.1.0` 启动后没有弹出 `v1.2.0` 更新提示，但设置页手动检查更新正常。
+- 排查确认启动更新提示组件位于 Router/Navigator 外层，自动检查拿到新版本后使用自身 context 调用 `showDialog`，因此找不到可用 Navigator 并被日志捕获。
+
+### 实现
+
+- 启动更新检查改为首帧后执行，并使用 `ROUTER_KEY.currentState?.overlay?.context` 弹出更新窗口。
+- 保持启动检查静默体验：无新版本不提示，网络异常只写日志；设置页手动检查仍会显示“无新版本”或“网络异常”。
+- 新增 `test/settings_page/startup_update_prompt_test.dart`，覆盖 Router 外层启动提示仍可弹窗。
+- 更新 `pubspec.yaml`、`AppSettings.version`、`docs/changelog.md`、`docs/releases/v1.2.1.md`、`docs/releases/v1.2.1.json`、`docs/releases/README.md` 和发布流程文档。
+
+### 验证
+
+- `flutter analyze` 通过。
+- `flutter test` 通过。
+- 发布前执行 Windows Release 构建与 `tools/release/package_release_windows.ps1 -Version 1.2.1`。
+
 ## 2026-05-05 - qisheng_player v1.2.0 发布整合
 
 ### 背景
