@@ -1,4 +1,4 @@
-﻿import 'package:qisheng_player/app_preference.dart';
+import 'package:qisheng_player/app_preference.dart';
 import 'package:qisheng_player/library/audio_library.dart';
 import 'package:qisheng_player/lyric/lrc.dart';
 import 'package:qisheng_player/page/audios_page.dart';
@@ -221,6 +221,61 @@ void main() {
     expect(
       find.descendant(of: previewPanel, matching: find.text('第二首歌词')),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('AudiosPage lyric preview centers active lyric line', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 960);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final audio = TestAudio(
+      title: 'Center Song',
+      artist: 'Artist Center',
+      album: 'Album Center',
+      path: r'E:\Music\center-preview.flac',
+    );
+    AudioLibrary.instance.audioCollection.add(audio);
+    AppPreference.instance.audiosPagePref.showLyricPreview = true;
+
+    final lines = List.generate(
+      32,
+      (index) => LrcLine(
+        Duration(seconds: index * 3),
+        index == 18 ? '当前中心歌词' : '歌词第$index行',
+        isBlank: false,
+        length: const Duration(seconds: 3),
+      ),
+    );
+    final lyric = FakeLyricController(Lrc(lines, LrcSource.local));
+
+    await tester.pumpWidget(
+      buildMediaHarness(
+        playbackController:
+            FakePlaybackController(audio: audio, queue: [audio]),
+        lyricController: lyric,
+        desktopLyricController: FakeDesktopLyricController(),
+        child: const AudiosPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    lyric.emitLine(18);
+    await tester.pumpAndSettle();
+
+    final activeLine = find.text('当前中心歌词');
+    final activeCenter = tester.getCenter(activeLine);
+    final previewPanel = tester.getRect(
+      find.byKey(const ValueKey('audio-lyric-preview-panel')),
+    );
+
+    expect(activeCenter.dy, greaterThan(previewPanel.top));
+    expect(activeCenter.dy, lessThan(previewPanel.bottom));
+    expect(
+      (activeCenter.dy - previewPanel.center.dy).abs(),
+      lessThan(previewPanel.height * 0.22),
     );
   });
 

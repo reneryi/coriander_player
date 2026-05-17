@@ -170,15 +170,15 @@ class _LyricPreviewLines extends StatefulWidget {
 }
 
 class _LyricPreviewLinesState extends State<_LyricPreviewLines> {
-  static const _itemExtent = 58.0;
-
   final ScrollController _scrollController = ScrollController();
   StreamSubscription<int>? _lineSubscription;
+  late List<GlobalKey> _lineKeys;
   int _activeLine = 0;
 
   @override
   void initState() {
     super.initState();
+    _lineKeys = _generateLineKeys();
     _bindController();
   }
 
@@ -187,10 +187,14 @@ class _LyricPreviewLinesState extends State<_LyricPreviewLines> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.lyricController != widget.lyricController) {
       _lineSubscription?.cancel();
+      if (oldWidget.lyric != widget.lyric) {
+        _lineKeys = _generateLineKeys();
+      }
       _bindController();
       return;
     }
     if (oldWidget.lyric != widget.lyric) {
+      _lineKeys = _generateLineKeys();
       _activeLine = widget.lyricController.currentLyricLineIndex
           .clamp(0, widget.lyric.lines.length - 1)
           .toInt();
@@ -199,6 +203,10 @@ class _LyricPreviewLinesState extends State<_LyricPreviewLines> {
         _jumpToActiveLine(animated: false);
       });
     }
+  }
+
+  List<GlobalKey> _generateLineKeys() {
+    return List.generate(widget.lyric.lines.length, (_) => GlobalKey());
   }
 
   void _bindController() {
@@ -220,72 +228,90 @@ class _LyricPreviewLinesState extends State<_LyricPreviewLines> {
   }
 
   void _jumpToActiveLine({bool animated = true}) {
-    if (!_scrollController.hasClients) return;
-    final viewport = _scrollController.position.viewportDimension;
-    final target =
-        (_activeLine * _itemExtent) - (viewport / 2) + (_itemExtent / 2);
-    final clamped = target.clamp(
-      0.0,
-      _scrollController.position.maxScrollExtent,
-    );
-    if (!animated) {
-      _scrollController.jumpTo(clamped);
-      return;
-    }
-    _scrollController.animateTo(
-      clamped,
-      duration: context.motion.lyricScrollDuration,
-      curve: context.motion.normal,
-    );
+    if (_activeLine < 0 || _activeLine >= _lineKeys.length) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final targetContext = _lineKeys[_activeLine].currentContext;
+      if (targetContext == null || !targetContext.mounted) return;
+
+      Scrollable.ensureVisible(
+        targetContext,
+        alignment: 0.45,
+        duration: animated ? context.motion.lyricScrollDuration : Duration.zero,
+        curve: context.motion.normal,
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ListView.separated(
-      controller: _scrollController,
-      padding: const EdgeInsets.only(top: 2, bottom: 10),
-      itemCount: widget.lyric.lines.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final entry = _LyricLineEntry.from(widget.lyric.lines[index]);
-        final active = index == _activeLine;
-        return AnimatedDefaultTextStyle(
-          duration: context.motion.controlTransitionDuration,
-          curve: context.motion.normal,
-          style: TextStyle(
-            color: active
-                ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.58),
-            fontSize: active ? 15 : 13,
-            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-            height: 1.4,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final verticalPadding = constraints.maxHeight.isFinite
+            ? (constraints.maxHeight * 0.42).clamp(24.0, 160.0).toDouble()
+            : 24.0;
+
+        return SingleChildScrollView(
+          controller: _scrollController,
+          padding: EdgeInsets.only(
+            top: verticalPadding,
+            bottom: verticalPadding,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                entry.primary,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (entry.secondary != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  entry.secondary!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: active
-                        ? scheme.onSurface.withValues(alpha: 0.62)
-                        : scheme.onSurface.withValues(alpha: 0.42),
-                    fontSize: active ? 11.5 : 10.5,
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
+            children: List.generate(widget.lyric.lines.length, (index) {
+              final entry = _LyricLineEntry.from(widget.lyric.lines[index]);
+              final active = index == _activeLine;
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == widget.lyric.lines.length - 1 ? 0 : 10,
+                ),
+                child: KeyedSubtree(
+                  key: _lineKeys[index],
+                  child: AnimatedDefaultTextStyle(
+                    duration: context.motion.controlTransitionDuration,
+                    curve: context.motion.normal,
+                    style: TextStyle(
+                      color: active
+                          ? scheme.onSurface
+                          : scheme.onSurface.withValues(alpha: 0.58),
+                      fontSize: active ? 15 : 13,
+                      fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                      height: 1.4,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.primary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (entry.secondary != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            entry.secondary!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: active
+                                  ? scheme.onSurface.withValues(alpha: 0.62)
+                                  : scheme.onSurface.withValues(alpha: 0.42),
+                              fontSize: active ? 11.5 : 10.5,
+                              fontWeight: FontWeight.w500,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ],
+              );
+            }),
           ),
         );
       },

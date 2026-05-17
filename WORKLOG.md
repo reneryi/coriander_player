@@ -2,6 +2,24 @@
 
 本文件记录重要实现、验证结果与后续注意事项。
 
+## 2026-05-17 - qisheng_player v1.2.2 小补丁
+
+### 背景
+
+- 用户反馈音乐页右侧歌词预览没有显示当前正在播放的歌词行，而是显示后面几句歌词，需要手动往上滑才能看到实时歌词。
+
+### 实现
+
+- 歌词预览移除固定行高滚动估算，改为给歌词行绑定真实 `GlobalKey` 并通过 `Scrollable.ensureVisible` 定位当前行。
+- 为预览列表增加动态上下留白，使当前歌词尽可能显示在预览区域中间附近，同时保留一定顶部空间。
+- 新增音乐页歌词预览居中回归测试，覆盖当前歌词行切换后的可见性和位置。
+- 更新 `pubspec.yaml`、`AppSettings.version`、`docs/changelog.md`、`docs/releases/v1.2.2.md`、`docs/releases/v1.2.2.json`、`docs/releases/README.md` 和发布流程文档。
+
+### 验证
+
+- `flutter test test/page/audios_page_test.dart` 通过。
+- 发布前执行完整检查、Windows Release 构建与 `tools/release/package_release_windows.ps1 -Version 1.2.2`。
+
 ## 2026-05-05 - qisheng_player v1.2.1 小补丁
 
 ### 背景
